@@ -3,46 +3,52 @@
  * Handles file downloads and cross-script communication
  */
 
+import type { DownloadData, MessagePayload } from '../types';
+
 // Listen for messages from content scripts
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'downloadFile') {
-    downloadFile(message.data)
-      .then(() => sendResponse({ success: true }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true; // Keep message channel open for async response
-  }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+browser.runtime.onMessage.addListener((message: any, _sender: any) => {
+  const msg = message as MessagePayload;
   
-  if (message.action === 'updateProgress') {
+  if (msg.action === 'downloadFile') {
+    return downloadFile(msg.data as DownloadData)
+      .then(() => ({ success: true }))
+      .catch((error: Error) => ({ success: false, error: error.message }));
+  }
+
+  if (msg.action === 'updateProgress') {
     // Forward progress updates to popup if it's open
     browser.runtime.sendMessage(message).catch(() => {
       // Popup might be closed, ignore error
     });
   }
+  
+  return undefined;
 });
 
 /**
  * Download file using the browser's download API
  */
-async function downloadFile(data) {
+async function downloadFile(data: DownloadData): Promise<number> {
   const { content, fileName, mimeType } = data;
-  
+
   // Create a data URL from the content
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
-  
+
   try {
     // Trigger download
     const downloadId = await browser.downloads.download({
       url: url,
       filename: fileName,
-      saveAs: true
+      saveAs: true,
     });
-    
+
     // Clean up the blob URL after download starts
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 60000); // Clean up after 1 minute
-    
+
     return downloadId;
   } catch (error) {
     URL.revokeObjectURL(url);
