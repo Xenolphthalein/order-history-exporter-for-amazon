@@ -83,10 +83,10 @@ export function filterYearsByDateRange(
   if (!startDate || !endDate) {
     return years;
   }
-  
+
   const startYear = new Date(startDate).getFullYear();
   const endYear = new Date(endDate).getFullYear();
-  
+
   return years.filter((year) => {
     const yearNum = parseInt(year, 10);
     return yearNum >= startYear && yearNum <= endYear;

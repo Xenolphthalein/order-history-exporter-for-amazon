@@ -60,9 +60,9 @@ describe('isAdvertisementOrder', () => {
   });
 
   it('should return true for order with many zero-price items, no date, no status, no URL', () => {
-    const items = Array(6).fill(null).map((_, i) => 
-      createMockItem({ title: `Product ${i}`, price: 0 })
-    );
+    const items = Array(6)
+      .fill(null)
+      .map((_, i) => createMockItem({ title: `Product ${i}`, price: 0 }));
     const order = createMockOrder({
       orderDate: '',
       orderStatus: '',
@@ -73,9 +73,9 @@ describe('isAdvertisementOrder', () => {
   });
 
   it('should return false for order with zero-price items but has date', () => {
-    const items = Array(6).fill(null).map((_, i) => 
-      createMockItem({ title: `Product ${i}`, price: 0 })
-    );
+    const items = Array(6)
+      .fill(null)
+      .map((_, i) => createMockItem({ title: `Product ${i}`, price: 0 }));
     const order = createMockOrder({
       orderDate: '2024-01-15',
       items,
@@ -99,7 +99,9 @@ describe('extractOrderId', () => {
   });
 
   it('should extract order ID from mixed text', () => {
-    expect(extractOrderId('Your order 123-4567890-1234567 has shipped')).toBe('123-4567890-1234567');
+    expect(extractOrderId('Your order 123-4567890-1234567 has shipped')).toBe(
+      '123-4567890-1234567'
+    );
   });
 
   it('should return null when no order ID present', () => {
@@ -111,17 +113,23 @@ describe('extractOrderId', () => {
   });
 
   it('should extract first order ID if multiple present', () => {
-    expect(extractOrderId('Orders: 123-4567890-1234567 and 987-6543210-9876543')).toBe('123-4567890-1234567');
+    expect(extractOrderId('Orders: 123-4567890-1234567 and 987-6543210-9876543')).toBe(
+      '123-4567890-1234567'
+    );
   });
 });
 
 describe('extractOrderIdFromUrl', () => {
   it('should extract from orderID parameter (lowercase D)', () => {
-    expect(extractOrderIdFromUrl('https://amazon.de/order-details?orderId=123-4567890-1234567')).toBe('123-4567890-1234567');
+    expect(
+      extractOrderIdFromUrl('https://amazon.de/order-details?orderId=123-4567890-1234567')
+    ).toBe('123-4567890-1234567');
   });
 
   it('should extract from orderID parameter (uppercase D)', () => {
-    expect(extractOrderIdFromUrl('https://amazon.de/order-details?orderID=123-4567890-1234567')).toBe('123-4567890-1234567');
+    expect(
+      extractOrderIdFromUrl('https://amazon.de/order-details?orderID=123-4567890-1234567')
+    ).toBe('123-4567890-1234567');
   });
 
   it('should return null when no order ID in URL', () => {

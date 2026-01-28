@@ -42,10 +42,10 @@ export const ORDER_PATHS = ['/gp/your-account/order-history', '/your-orders'];
  */
 export function isAmazonOrderHistoryPage(url: string): boolean {
   if (!url) return false;
-  
+
   const isAmazonDomain = AMAZON_DOMAINS.some((domain) => url.includes(domain));
   const isOrderPath = ORDER_PATHS.some((path) => url.includes(path));
-  
+
   return isAmazonDomain && isOrderPath;
 }
 

@@ -37,7 +37,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener((message: any, _sender: any) => {
     const msg = message as { action: string; options?: ExportOptions };
-    
+
     if (msg.action === 'exportOrders' && msg.options) {
       startExport(msg.options);
       return Promise.resolve({ success: true, message: 'Export started' });
@@ -46,7 +46,7 @@ import {
       const state = getExportState();
       return Promise.resolve(state ? { success: true, ...state } : { success: false });
     }
-    
+
     return undefined;
   });
 
@@ -109,7 +109,9 @@ import {
     console.log('[Amazon Exporter] Found years:', years);
 
     // Filter years based on date range
-    const yearsToProcess = exportAll ? [...years] : filterYearsByDateRange(years, startDate, endDate);
+    const yearsToProcess = exportAll
+      ? [...years]
+      : filterYearsByDateRange(years, startDate, endDate);
 
     console.log('[Amazon Exporter] Years to process:', yearsToProcess);
 
@@ -143,7 +145,10 @@ import {
     console.log('[Amazon Exporter] Starting export, navigating to:', firstUrl);
 
     // If we're already on the right page, scrape directly
-    if (window.location.href.includes(`timeFilter=year-${firstYear}`) && !window.location.href.includes('startIndex')) {
+    if (
+      window.location.href.includes(`timeFilter=year-${firstYear}`) &&
+      !window.location.href.includes('startIndex')
+    ) {
       scrapeCurrentPageAndContinue(state);
     } else {
       window.location.href = firstUrl;
@@ -172,7 +177,12 @@ import {
     const endDateObj = state.endDate ? new Date(state.endDate) : null;
 
     // Scrape orders from current page
-    const pageOrders = scrapeVisibleOrders(startDateObj, endDateObj, state.exportAll, new Set(state.seenOrderIds));
+    const pageOrders = scrapeVisibleOrders(
+      startDateObj,
+      endDateObj,
+      state.exportAll,
+      new Set(state.seenOrderIds)
+    );
 
     console.log('[Amazon Exporter] Found', pageOrders.length, 'orders on this page');
 
@@ -321,10 +331,15 @@ import {
     });
 
     // Check dropdown items in Amazon's custom dropdown
-    const dropdownItems = document.querySelectorAll('[data-value*="year-"], .a-popover-inner li, #orderFilter option');
+    const dropdownItems = document.querySelectorAll(
+      '[data-value*="year-"], .a-popover-inner li, #orderFilter option'
+    );
     dropdownItems.forEach((item) => {
       const value =
-        item.getAttribute('data-value') || (item as HTMLOptionElement).value || item.textContent || '';
+        item.getAttribute('data-value') ||
+        (item as HTMLOptionElement).value ||
+        item.textContent ||
+        '';
       const yearMatch = value.match(/year-?(20\d{2})/i) || value.match(/\b(20\d{2})\b/);
       if (yearMatch?.[1] && !years.includes(yearMatch[1])) {
         years.push(yearMatch[1]);
@@ -391,11 +406,14 @@ import {
       '[class*="order-card"]',
     ];
 
-    let orderElements: NodeListOf<Element> | Element[] = document.querySelectorAll('.__nonexistent__');
+    let orderElements: NodeListOf<Element> | Element[] =
+      document.querySelectorAll('.__nonexistent__');
     for (const selector of orderSelectors) {
       orderElements = document.querySelectorAll(selector);
       if (orderElements.length > 0) {
-        console.log(`[Amazon Exporter] Found ${orderElements.length} orders with selector: ${selector}`);
+        console.log(
+          `[Amazon Exporter] Found ${orderElements.length} orders with selector: ${selector}`
+        );
         break;
       }
     }
@@ -588,8 +606,14 @@ import {
       if (!title || title.length < 5) {
         let parent = link.parentElement;
         for (let i = 0; i < 5 && parent; i++) {
-          const titleEl = parent.querySelector('.a-text-bold, [class*="product-title"], [class*="item-title"]');
-          if (titleEl && titleEl.textContent?.trim().length && titleEl.textContent.trim().length > 5) {
+          const titleEl = parent.querySelector(
+            '.a-text-bold, [class*="product-title"], [class*="item-title"]'
+          );
+          if (
+            titleEl &&
+            titleEl.textContent?.trim().length &&
+            titleEl.textContent.trim().length > 5
+          ) {
             title = titleEl.textContent.trim();
             break;
           }
@@ -611,10 +635,12 @@ import {
       // Get quantity - first look for the visual quantity badge
       let foundQuantity = false;
       let parentEl = link.parentElement;
-      
+
       // Look for the quantity badge element (product-image__qty)
       for (let i = 0; i < 10 && parentEl && !foundQuantity; i++) {
-        const qtyBadge = parentEl.querySelector('.product-image__qty, [class*="qty-badge"], [class*="quantity-badge"]');
+        const qtyBadge = parentEl.querySelector(
+          '.product-image__qty, [class*="qty-badge"], [class*="quantity-badge"]'
+        );
         if (qtyBadge) {
           const qtyText = qtyBadge.textContent?.trim();
           if (qtyText) {
@@ -633,7 +659,9 @@ import {
       if (!foundQuantity) {
         parentEl = link.parentElement;
         for (let i = 0; i < 8 && parentEl; i++) {
-          const qtyMatch = (parentEl.textContent || '').match(/(?:Qty|Quantity|Menge|Anzahl)[:\s]*(\d+)/i);
+          const qtyMatch = (parentEl.textContent || '').match(
+            /(?:Qty|Quantity|Menge|Anzahl)[:\s]*(\d+)/i
+          );
           if (qtyMatch?.[1]) {
             item.quantity = parseInt(qtyMatch[1], 10);
             foundQuantity = true;
@@ -666,7 +694,10 @@ import {
       if (!order) continue;
 
       try {
-        updateProgress(80 + (i / ordersNeedingDetails.length) * 10, getMessage('fetchingPricesProgress', [String(i + 1), String(ordersNeedingDetails.length)]));
+        updateProgress(
+          80 + (i / ordersNeedingDetails.length) * 10,
+          getMessage('fetchingPricesProgress', [String(i + 1), String(ordersNeedingDetails.length)])
+        );
 
         const response = await fetch(order.detailsUrl, {
           credentials: 'include',
@@ -704,7 +735,9 @@ import {
       const link = container.querySelector('a[href*="/dp/"], a[href*="/gp/product/"]');
       if (!link) return;
 
-      const asinMatch = (link.getAttribute('href') || '').match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+      const asinMatch = (link.getAttribute('href') || '').match(
+        /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i
+      );
       if (!asinMatch?.[1]) return;
 
       const asin = asinMatch[1].toUpperCase();
@@ -735,13 +768,17 @@ import {
     });
 
     // Also look for the order summary section for prices per item
-    const orderSummary = doc.querySelector('#orderSummary, .order-summary, [class*="order-summary"]');
+    const orderSummary = doc.querySelector(
+      '#orderSummary, .order-summary, [class*="order-summary"]'
+    );
     if (orderSummary) {
       const summaryRows = orderSummary.querySelectorAll('.a-row, tr');
       summaryRows.forEach((row) => {
         const rowText = row.textContent || '';
         // Look for item-specific discounts
-        const discountMatch = rowText.match(/(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i);
+        const discountMatch = rowText.match(
+          /(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i
+        );
         if (discountMatch?.[2]) {
           const discountAmount = parsePrice(discountMatch[2]);
           if (discountAmount > 0) {
@@ -758,13 +795,13 @@ import {
         item.price = price;
       }
     });
-    
+
     // If some items still have no price, try to find them in a more aggressive search
     const itemsWithoutPrice = order.items.filter((item) => item.price === 0);
     if (itemsWithoutPrice.length > 0) {
       // Search the entire page for ASIN-price associations
       const pageText = doc.body.textContent || '';
-      
+
       itemsWithoutPrice.forEach((item) => {
         // Look for price near the ASIN in the document
         const asinRegex = new RegExp(item.asin + '[^€]*(?:EUR|€)\\s*([0-9]+[.,][0-9]{2})', 'i');
@@ -819,7 +856,11 @@ import {
             if (amount > 0) {
               const description = text.replace(/\s+/g, ' ').trim().substring(0, 100);
               // Avoid duplicate promotions
-              if (!promotions.some((p) => Math.abs(p.amount - amount) < 0.01 && p.description === description)) {
+              if (
+                !promotions.some(
+                  (p) => Math.abs(p.amount - amount) < 0.01 && p.description === description
+                )
+              ) {
                 promotions.push({ description, amount });
                 totalSavings += amount;
               }
@@ -831,7 +872,9 @@ import {
     });
 
     // Also check the order summary section for totals
-    const summarySection = doc.querySelector('#orderSummary, .order-summary, [class*="order-summary"], .a-box.order-summary');
+    const summarySection = doc.querySelector(
+      '#orderSummary, .order-summary, [class*="order-summary"], .a-box.order-summary'
+    );
     if (summarySection) {
       const rows = summarySection.querySelectorAll('.a-row, tr, div');
       rows.forEach((row) => {
@@ -875,9 +918,11 @@ import {
 
     order.promotions = promotions;
     order.totalSavings = Math.round(totalSavings * 100) / 100;
-    
+
     if (promotions.length > 0) {
-      console.log(`[Amazon Exporter] Order ${order.orderId} has ${promotions.length} promotions, total savings: €${totalSavings}`);
+      console.log(
+        `[Amazon Exporter] Order ${order.orderId} has ${promotions.length} promotions, total savings: €${totalSavings}`
+      );
     }
   }
 
@@ -892,11 +937,13 @@ import {
    * Update progress in popup
    */
   function updateProgress(percent: number, message: string): void {
-    browser.runtime.sendMessage({
-      action: 'updateProgress',
-      data: { percent, message },
-    }).catch(() => {
-      // Popup might be closed
-    });
+    browser.runtime
+      .sendMessage({
+        action: 'updateProgress',
+        data: { percent, message },
+      })
+      .catch(() => {
+        // Popup might be closed
+      });
   }
 })();

@@ -16,7 +16,7 @@ function getMessage(key: string, substitutions?: string | string[]): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 browser.runtime.onMessage.addListener((message: any, _sender: any) => {
   const msg = message as MessagePayload;
-  
+
   if (msg.action === 'downloadFile') {
     return downloadFile(msg.data as DownloadData)
       .then(() => ({ success: true }))
@@ -29,7 +29,7 @@ browser.runtime.onMessage.addListener((message: any, _sender: any) => {
       // Popup might be closed, ignore error
     });
   }
-  
+
   return undefined;
 });
 

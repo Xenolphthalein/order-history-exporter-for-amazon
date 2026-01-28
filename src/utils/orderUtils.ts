@@ -56,4 +56,3 @@ export function extractOrderIdFromUrl(url: string): string | null {
   const urlMatch = url.match(/orderI[Dd]=(\d{3}-\d{7}-\d{7})/i);
   return urlMatch?.[1] || null;
 }
-

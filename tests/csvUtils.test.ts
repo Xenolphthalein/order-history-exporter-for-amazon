@@ -40,14 +40,14 @@ describe('escapeCSVValue', () => {
 
 describe('formatPromotionsForCSV', () => {
   it('should format single promotion', () => {
-    const promotions = [{ description: 'Coupon discount', amount: 5.00 }];
+    const promotions = [{ description: 'Coupon discount', amount: 5.0 }];
     expect(formatPromotionsForCSV(promotions)).toBe('Coupon discount: €5');
   });
 
   it('should format multiple promotions with semicolon separator', () => {
     const promotions = [
-      { description: 'Coupon', amount: 5.00 },
-      { description: 'Prime', amount: 3.50 },
+      { description: 'Coupon', amount: 5.0 },
+      { description: 'Prime', amount: 3.5 },
     ];
     expect(formatPromotionsForCSV(promotions)).toBe('Coupon: €5; Prime: €3.5');
   });
@@ -109,7 +109,7 @@ describe('convertOrdersToCSV', () => {
             title: 'Product 2',
             asin: 'B000000002',
             quantity: 2,
-            price: 15.00,
+            price: 15.0,
             discount: 0,
             itemUrl: 'https://amazon.de/dp/B000000002',
           },
@@ -126,7 +126,7 @@ describe('convertOrdersToCSV', () => {
   it('should only include savings on first item row', () => {
     const orders = [
       createOrder({
-        totalSavings: 10.00,
+        totalSavings: 10.0,
         items: [
           {
             title: 'Product 1',
@@ -140,7 +140,7 @@ describe('convertOrdersToCSV', () => {
             title: 'Product 2',
             asin: 'B000000002',
             quantity: 1,
-            price: 15.00,
+            price: 15.0,
             discount: 0,
             itemUrl: 'https://amazon.de/dp/B000000002',
           },
@@ -149,7 +149,7 @@ describe('convertOrdersToCSV', () => {
     ];
     const csv = convertOrdersToCSV(orders);
     const lines = csv.split('\n');
-    
+
     // First item row should have savings
     expect(lines[1]).toMatch(/,10,/);
     // Second item row should have empty savings field

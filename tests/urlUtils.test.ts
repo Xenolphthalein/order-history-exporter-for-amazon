@@ -35,7 +35,9 @@ describe('buildOrderPageUrl', () => {
 describe('isAmazonOrderHistoryPage', () => {
   describe('valid Amazon order pages', () => {
     it('should return true for amazon.com order history', () => {
-      expect(isAmazonOrderHistoryPage('https://www.amazon.com/gp/your-account/order-history')).toBe(true);
+      expect(isAmazonOrderHistoryPage('https://www.amazon.com/gp/your-account/order-history')).toBe(
+        true
+      );
     });
 
     it('should return true for amazon.de your-orders', () => {
@@ -43,11 +45,15 @@ describe('isAmazonOrderHistoryPage', () => {
     });
 
     it('should return true for amazon.co.uk order history', () => {
-      expect(isAmazonOrderHistoryPage('https://www.amazon.co.uk/your-orders?timeFilter=year-2024')).toBe(true);
+      expect(
+        isAmazonOrderHistoryPage('https://www.amazon.co.uk/your-orders?timeFilter=year-2024')
+      ).toBe(true);
     });
 
     it('should return true for amazon.fr order history', () => {
-      expect(isAmazonOrderHistoryPage('https://www.amazon.fr/gp/your-account/order-history')).toBe(true);
+      expect(isAmazonOrderHistoryPage('https://www.amazon.fr/gp/your-account/order-history')).toBe(
+        true
+      );
     });
 
     it('should return true for amazon.co.jp order history', () => {
@@ -86,8 +92,12 @@ describe('getOrderHistoryBaseUrl', () => {
   });
 
   it('should work with different Amazon domains', () => {
-    expect(getOrderHistoryBaseUrl('https://www.amazon.com/some-path')).toBe('https://www.amazon.com/your-orders/orders');
-    expect(getOrderHistoryBaseUrl('https://www.amazon.co.uk/some-path')).toBe('https://www.amazon.co.uk/your-orders/orders');
+    expect(getOrderHistoryBaseUrl('https://www.amazon.com/some-path')).toBe(
+      'https://www.amazon.com/your-orders/orders'
+    );
+    expect(getOrderHistoryBaseUrl('https://www.amazon.co.uk/some-path')).toBe(
+      'https://www.amazon.co.uk/your-orders/orders'
+    );
   });
 
   it('should return empty string for invalid URL', () => {
@@ -109,7 +119,9 @@ describe('extractAsinFromUrl', () => {
   });
 
   it('should extract ASIN from URL with additional path components', () => {
-    expect(extractAsinFromUrl('https://www.amazon.de/Product-Name/dp/B08N5WRWNW/ref=sr_1_1')).toBe('B08N5WRWNW');
+    expect(extractAsinFromUrl('https://www.amazon.de/Product-Name/dp/B08N5WRWNW/ref=sr_1_1')).toBe(
+      'B08N5WRWNW'
+    );
   });
 
   it('should return null for non-product URLs', () => {

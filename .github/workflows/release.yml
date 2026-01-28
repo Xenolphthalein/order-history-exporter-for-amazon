@@ -105,7 +105,7 @@ jobs:
         run: |
           # Get the previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
+
           if [ -z "$PREVIOUS_TAG" ]; then
             # If no previous tag, get all commits
             COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges -n 50)
@@ -113,7 +113,7 @@ jobs:
             # Get commits between previous tag and current tag
             COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges ${PREVIOUS_TAG}..HEAD)
           fi
-          
+
           # Create release notes
           {
             echo "NOTES<<EOF"

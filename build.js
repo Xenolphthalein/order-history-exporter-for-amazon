@@ -61,11 +61,11 @@ if (fs.existsSync(iconsDir)) {
   if (!fs.existsSync(destIconsDir)) {
     fs.mkdirSync(destIconsDir, { recursive: true });
   }
-  
-  fs.readdirSync(iconsDir).forEach(file => {
+
+  fs.readdirSync(iconsDir).forEach((file) => {
     fs.copyFileSync(`${iconsDir}/${file}`, `${destIconsDir}/${file}`);
   });
-  
+
   console.log('✓ Icons copied');
 }
 
@@ -78,11 +78,11 @@ if (fs.existsSync(localesDir)) {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    
-    fs.readdirSync(src).forEach(item => {
+
+    fs.readdirSync(src).forEach((item) => {
       const srcPath = path.join(src, item);
       const destPath = path.join(dest, item);
-      
+
       if (fs.statSync(srcPath).isDirectory()) {
         copyDirRecursive(srcPath, destPath);
       } else {
@@ -90,7 +90,7 @@ if (fs.existsSync(localesDir)) {
       }
     });
   };
-  
+
   copyDirRecursive(localesDir, destLocalesDir);
   console.log('✓ Locales copied');
 }

@@ -1,90 +1,106 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="extensionName">Order History Exporter for Amazon</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1 data-i18n="popupTitle">Amazon Order Exporter</h1>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="extensionName">Order History Exporter for Amazon</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 data-i18n="popupTitle">Amazon Order Exporter</h1>
+      </header>
 
-    <div id="not-amazon" class="message hidden">
-      <p data-i18n="notAmazonWarning">Please navigate to your <strong>Amazon Order History</strong> page to use this extension.</p>
-      <a href="https://www.amazon.com/gp/your-account/order-history" target="_blank" class="btn btn-link" data-i18n="goToOrderHistory">
-        Go to Order History →
-      </a>
-    </div>
-
-    <div id="main-content" class="hidden">
-      <div id="settings-section">
-        <section class="section">
-          <h2 data-i18n="exportRange">Export Range</h2>
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" name="exportRange" value="all" checked>
-              <span data-i18n="exportAllOrders">Export all orders</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="exportRange" value="dateRange">
-              <span data-i18n="selectDateRange">Select date range</span>
-            </label>
-          </div>
-
-          <div id="date-range-inputs" class="date-inputs hidden">
-            <div class="input-group">
-              <label for="startDate" data-i18n="startDate">Start Date:</label>
-              <input type="date" id="startDate">
-            </div>
-            <div class="input-group">
-              <label for="endDate" data-i18n="endDate">End Date:</label>
-              <input type="date" id="endDate">
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <h2 data-i18n="exportFormat">Export Format</h2>
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" name="exportFormat" value="json" checked>
-              <span>JSON</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="exportFormat" value="csv">
-              <span>CSV</span>
-            </label>
-          </div>
-        </section>
+      <div id="not-amazon" class="message hidden">
+        <p data-i18n="notAmazonWarning">
+          Please navigate to your <strong>Amazon Order History</strong> page to use this extension.
+        </p>
+        <a
+          href="https://www.amazon.com/gp/your-account/order-history"
+          target="_blank"
+          class="btn btn-link"
+          data-i18n="goToOrderHistory"
+        >
+          Go to Order History →
+        </a>
       </div>
 
-      <section class="section">
-        <button id="exportBtn" class="btn btn-primary">
-          <span class="btn-text" data-i18n="exportOrders">Export Orders</span>
-          <span class="btn-loading hidden">
-            <span class="spinner"></span> <span data-i18n="exporting">Exporting...</span>
-          </span>
-        </button>
-      </section>
+      <div id="main-content" class="hidden">
+        <div id="settings-section">
+          <section class="section">
+            <h2 data-i18n="exportRange">Export Range</h2>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="exportRange" value="all" checked />
+                <span data-i18n="exportAllOrders">Export all orders</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="exportRange" value="dateRange" />
+                <span data-i18n="selectDateRange">Select date range</span>
+              </label>
+            </div>
 
-      <div id="progress-section" class="section hidden">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
+            <div id="date-range-inputs" class="date-inputs hidden">
+              <div class="input-group">
+                <label for="startDate" data-i18n="startDate">Start Date:</label>
+                <input type="date" id="startDate" />
+              </div>
+              <div class="input-group">
+                <label for="endDate" data-i18n="endDate">End Date:</label>
+                <input type="date" id="endDate" />
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2 data-i18n="exportFormat">Export Format</h2>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="exportFormat" value="json" checked />
+                <span>JSON</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="exportFormat" value="csv" />
+                <span>CSV</span>
+              </label>
+            </div>
+          </section>
         </div>
-        <p id="progressText" class="progress-text" data-i18n="preparingExport">Preparing export...</p>
+
+        <section class="section">
+          <button id="exportBtn" class="btn btn-primary">
+            <span class="btn-text" data-i18n="exportOrders">Export Orders</span>
+            <span class="btn-loading hidden">
+              <span class="spinner"></span> <span data-i18n="exporting">Exporting...</span>
+            </span>
+          </button>
+        </section>
+
+        <div id="progress-section" class="section hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p id="progressText" class="progress-text" data-i18n="preparingExport">
+            Preparing export...
+          </p>
+        </div>
+
+        <div id="status-message" class="status-message hidden"></div>
       </div>
 
-      <div id="status-message" class="status-message hidden"></div>
+      <footer>
+        <p>
+          <span data-i18n="footerText">Open source • No tracking •</span>
+          <a
+            href="https://github.com/xenolphthalein/order-history-exporter-for-amazon"
+            target="_blank"
+            >GitHub</a
+          >
+        </p>
+      </footer>
     </div>
 
-    <footer>
-      <p><span data-i18n="footerText">Open source • No tracking •</span> <a href="https://github.com/xenolphthalein/order-history-exporter-for-amazon" target="_blank">GitHub</a></p>
-    </footer>
-  </div>
-
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>

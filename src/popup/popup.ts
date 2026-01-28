@@ -76,8 +76,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Handle export button click
   exportBtn.addEventListener('click', async () => {
-    const exportRangeEl = document.querySelector('input[name="exportRange"]:checked') as HTMLInputElement;
-    const exportFormatEl = document.querySelector('input[name="exportFormat"]:checked') as HTMLInputElement;
+    const exportRangeEl = document.querySelector(
+      'input[name="exportRange"]:checked'
+    ) as HTMLInputElement;
+    const exportFormatEl = document.querySelector(
+      'input[name="exportFormat"]:checked'
+    ) as HTMLInputElement;
     const exportRange = exportRangeEl?.value || 'all';
     const exportFormat = (exportFormatEl?.value || 'json') as 'json' | 'csv';
 
@@ -103,10 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsSection.classList.add('hidden');
     exportBtn.classList.add('hidden');
     showProgress(0, getMessage('exportStartedMessage'));
-    showStatus(
-      getMessage('exportStartedStatus'),
-      'success'
-    );
+    showStatus(getMessage('exportStartedStatus'), 'success');
 
     try {
       if (!currentTab?.id) {
@@ -131,10 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       })) as { success: boolean; error?: string };
 
       if (response.success) {
-        showStatus(
-          getMessage('exportInitiatedStatus'),
-          'success'
-        );
+        showStatus(getMessage('exportInitiatedStatus'), 'success');
       } else {
         settingsSection.classList.remove('hidden');
         exportBtn.classList.remove('hidden');
@@ -146,10 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       settingsSection.classList.remove('hidden');
       exportBtn.classList.remove('hidden');
       hideProgress();
-      showStatus(
-        getMessage('exportFailedRefresh'),
-        'error'
-      );
+      showStatus(getMessage('exportFailedRefresh'), 'error');
     }
   });
 

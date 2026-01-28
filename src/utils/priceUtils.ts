@@ -9,15 +9,15 @@
  */
 export function parsePrice(priceStr: string): number {
   if (!priceStr) return 0;
-  
+
   let cleaned = priceStr.trim();
-  
+
   // Handle European format (1.234,56 -> 1234.56)
   if (cleaned.includes(',') && cleaned.includes('.')) {
     // If comma comes after period, it's European format
     const lastComma = cleaned.lastIndexOf(',');
     const lastPeriod = cleaned.lastIndexOf('.');
-    
+
     if (lastComma > lastPeriod) {
       // European: periods are thousands separators, comma is decimal
       cleaned = cleaned.replace(/\./g, '').replace(',', '.');
@@ -36,7 +36,7 @@ export function parsePrice(priceStr: string): number {
       cleaned = cleaned.replace(/,/g, '');
     }
   }
-  
+
   const amount = parseFloat(cleaned);
   return isNaN(amount) ? 0 : amount;
 }

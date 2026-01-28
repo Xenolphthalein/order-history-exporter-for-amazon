@@ -66,7 +66,7 @@ header h1 {
   background: #fff8e5;
 }
 
-.radio-label input[type="radio"] {
+.radio-label input[type='radio'] {
   accent-color: #ff9900;
 }
 
@@ -93,7 +93,7 @@ header h1 {
   margin-bottom: 4px;
 }
 
-.input-group input[type="date"] {
+.input-group input[type='date'] {
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;
@@ -101,7 +101,7 @@ header h1 {
   font-size: 13px;
 }
 
-.input-group input[type="date"]:focus {
+.input-group input[type='date']:focus {
   outline: none;
   border-color: #ff9900;
 }

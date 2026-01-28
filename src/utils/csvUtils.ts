@@ -20,10 +20,10 @@ export function escapeCSVValue(value: string | number | undefined): string {
 /**
  * Format promotions as a string for CSV
  */
-export function formatPromotionsForCSV(promotions: { description: string; amount: number }[]): string {
-  return promotions
-    .map((p) => `${p.description}: €${p.amount}`)
-    .join('; ');
+export function formatPromotionsForCSV(
+  promotions: { description: string; amount: number }[]
+): string {
+  return promotions.map((p) => `${p.description}: €${p.amount}`).join('; ');
 }
 
 /**

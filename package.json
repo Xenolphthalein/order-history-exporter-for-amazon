@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
     "watch": "tsc --watch",
     "test": "vitest run",
@@ -34,7 +36,9 @@
     "@vitest/coverage-v8": "4.0.18",
     "esbuild": "0.27.2",
     "eslint": "9.39.2",
+    "eslint-config-prettier": "^10.1.8",
     "knip": "5.82.1",
+    "prettier": "^3.8.1",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
   },
