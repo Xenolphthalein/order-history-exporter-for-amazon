@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "description": "Export your Amazon order history as JSON or CSV files",
   "icons": {
-    "48": "icons/icon-48.svg",
-    "96": "icons/icon-96.svg"
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
   },
   "permissions": [
     "activeTab",
@@ -25,8 +25,8 @@
   ],
   "browser_action": {
     "default_icon": {
-      "48": "icons/icon-48.svg",
-      "96": "icons/icon-96.svg"
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png"
     },
     "default_title": "Amazon Order History Exporter",
     "default_popup": "popup/popup.html"
