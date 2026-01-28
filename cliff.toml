@@ -70,4 +70,4 @@ link_parsers = [
 # These values will be overridden by the git-cliff-action in CI
 [remote.github]
 owner = "xenolphthalein"
-repo = "amazon-order-history-exporter"
+repo = "order-history-exporter-for-amazon"
