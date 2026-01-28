@@ -3,6 +3,7 @@
  * Handles UI interactions and communicates with content script
  */
 
+import browser from 'webextension-polyfill';
 import type { ExportOptions, ProgressData } from '../types';
 import { isAmazonOrderHistoryPage } from '../utils';
 

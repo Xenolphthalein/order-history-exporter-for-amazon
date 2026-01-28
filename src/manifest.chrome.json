@@ -1,16 +1,16 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "version": "1.0.0",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "icons": {
     "48": "icons/icon-48.png",
-    "96": "icons/icon-96.png"
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
   },
-  "permissions": [
-    "activeTab",
-    "downloads",
+  "permissions": ["activeTab", "downloads"],
+  "host_permissions": [
     "*://*.amazon.com/*",
     "*://*.amazon.co.uk/*",
     "*://*.amazon.de/*",
@@ -24,7 +24,7 @@
     "*://*.amazon.com.br/*",
     "*://*.amazon.com.mx/*"
   ],
-  "browser_action": {
+  "action": {
     "default_icon": {
       "48": "icons/icon-48.png",
       "96": "icons/icon-96.png"
@@ -65,6 +65,7 @@
     }
   ],
   "background": {
-    "scripts": ["background/background.js"]
+    "service_worker": "background/background.js",
+    "type": "module"
   }
 }

@@ -4,9 +4,10 @@
 
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Firefox](https://img.shields.io/badge/Firefox-Extension-FF7139?logo=firefox&logoColor=white)](https://www.mozilla.org/firefox/)
+[![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://www.google.com/chrome/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-Firefox browser extension for exporting your Amazon order history to JSON or CSV format. While it is designed for use with [Toolbox for Firefly III](https://github.com/xenolphthalein/toolbox-for-firefly-iii) to enrich financial transactions with Amazon order details, it can be used independently for personal record-keeping or data analysis.
+Browser extension for exporting your Amazon order history to JSON or CSV format. Supports both **Firefox** and **Chromium-based browsers** (Chrome, Edge, Brave, etc.). While it is designed for use with [Toolbox for Firefly III](https://github.com/xenolphthalein/toolbox-for-firefly-iii) to enrich financial transactions with Amazon order details, it can be used independently for personal record-keeping or data analysis.
 
 ---
 
@@ -50,17 +51,23 @@ cd order-history-exporter-for-amazon
 # Install dependencies
 npm install
 
-# Build the extension
+# Build for all browsers (Firefox + Chrome)
 npm run build
+
+# Or build for a specific browser
+npm run build:firefox
+npm run build:chrome
 ```
 
-The built extension will be in the `dist/` directory. Load it in Firefox via `about:debugging` → "This Firefox" → "Load Temporary Add-on" and select the `manifest.json` file.
+The built extensions will be in browser-specific directories:
+- **Firefox**: `dist/firefox/` — Load via `about:debugging` → "This Firefox" → "Load Temporary Add-on"
+- **Chrome/Chromium**: `dist/chrome/` — Load via `chrome://extensions` → "Developer mode" → "Load unpacked"
 
 ---
 
 ## Usage
 
-1. Install the extension in Firefox
+1. Install the extension in your browser (Firefox or Chrome/Chromium)
 2. Navigate to Amazon and log in to your account
 3. Click the extension icon in the toolbar
 4. Select your export options (date range, format)
@@ -132,8 +139,14 @@ Contributions are welcome. Please submit PRs to the `main` branch.
 **Development Commands**
 
 ```bash
-npm run build        # Production build
-npm run lint         # ESLint
+npm run build              # Build for all browsers (development)
+npm run build:firefox      # Build Firefox extension only
+npm run build:chrome       # Build Chrome extension only
+npm run build:prod         # Production build for all browsers
+npm run build:prod:firefox # Production build for Firefox
+npm run build:prod:chrome  # Production build for Chrome
+npm run lint               # ESLint
+npm run test               # Run tests
 ```
 
 ---

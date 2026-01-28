@@ -101,15 +101,21 @@ jobs:
 
       - name: Package Firefox extension (.xpi)
         run: |
-          cd dist
-          zip -r ../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}.xpi ./*
-          cd ..
+          cd dist/firefox
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.xpi ./*
+          cd ../..
 
-      - name: Package plain zip
+      - name: Package Firefox extension (.zip)
         run: |
-          cd dist
-          zip -r ../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}.zip ./*
-          cd ..
+          cd dist/firefox
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.zip ./*
+          cd ../..
+
+      - name: Package Chrome extension (.zip)
+        run: |
+          cd dist/chrome
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip ./*
+          cd ../..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -119,11 +125,17 @@ jobs:
             ## What's Changed
 
             ${{ steps.changelog.outputs.content }}
+
+            ## Downloads
+
+            - **Firefox**: `.xpi` file (or `.zip` for manual installation)
+            - **Chrome/Chromium**: `.zip` file (load unpacked in developer mode)
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: false
           files: |
-            order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}.xpi
-            order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}.zip
+            order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.xpi
+            order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.zip
+            order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

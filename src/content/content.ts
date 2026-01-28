@@ -3,6 +3,7 @@
  * Scrapes order data from Amazon order history pages using browser navigation
  */
 
+import browser from 'webextension-polyfill';
 import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
 import {
   parseDate,

@@ -3,6 +3,7 @@
  * Handles file downloads and cross-script communication
  */
 
+import browser from 'webextension-polyfill';
 import type { DownloadData, MessagePayload } from '../types';
 
 /**
@@ -39,26 +40,41 @@ browser.runtime.onMessage.addListener((message: any, _sender: any) => {
 async function downloadFile(data: DownloadData): Promise<number> {
   const { content, fileName, mimeType } = data;
 
-  // Create a data URL from the content
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
+  let url: string;
+  let isObjectUrl = false;
+
+  // Check if we're in a service worker context (Chrome MV3) or regular background script (Firefox)
+  // Service workers don't have access to Blob/URL.createObjectURL
+  if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
+    // Firefox: Use Blob URL
+    const blob = new Blob([content], { type: mimeType });
+    url = URL.createObjectURL(blob);
+    isObjectUrl = true;
+  } else {
+    // Chrome MV3 service worker: Use data URL
+    const base64Content = globalThis.btoa(unescape(encodeURIComponent(content)));
+    url = `data:${mimeType};base64,${base64Content}`;
+  }
 
   try {
-    // Trigger download
     const downloadId = await browser.downloads.download({
       url: url,
       filename: fileName,
       saveAs: true,
     });
 
-    // Clean up the blob URL after download starts
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 60000); // Clean up after 1 minute
+    // Clean up blob URL after a delay (only for object URLs)
+    if (isObjectUrl) {
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 60000);
+    }
 
     return downloadId;
   } catch (error) {
-    URL.revokeObjectURL(url);
+    if (isObjectUrl) {
+      URL.revokeObjectURL(url);
+    }
     throw error;
   }
 }

@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "npm run typecheck && npm run lint && node build.js",
+    "build:firefox": "npm run typecheck && npm run lint && node build.js --target=firefox",
+    "build:chrome": "npm run typecheck && npm run lint && node build.js --target=chrome",
     "build:prod": "NODE_ENV=production npm run build",
+    "build:prod:firefox": "NODE_ENV=production npm run build:firefox",
+    "build:prod:chrome": "NODE_ENV=production npm run build:chrome",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
