@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/background/background.ts",
+    "src/popup/popup.ts",
+    "src/content/content.ts"
+  ],
+  "project": ["src/**/*.ts"],
+  "ignore": ["src/utils/index.ts"]
+}

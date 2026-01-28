@@ -4,6 +4,7 @@
  */
 
 import type { ExportOptions, ProgressData } from '../types';
+import { isAmazonOrderHistoryPage } from '../utils';
 
 /**
  * Get localized message from browser i18n API
@@ -152,27 +153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
-
-  function isAmazonOrderHistoryPage(url: string): boolean {
-    if (!url) return false;
-    const amazonDomains = [
-      'amazon.com',
-      'amazon.co.uk',
-      'amazon.de',
-      'amazon.fr',
-      'amazon.it',
-      'amazon.es',
-      'amazon.ca',
-      'amazon.co.jp',
-      'amazon.in',
-      'amazon.com.au',
-      'amazon.com.br',
-      'amazon.com.mx',
-    ];
-    const orderPaths = ['/gp/your-account/order-history', '/your-orders'];
-
-    return amazonDomains.some((domain) => url.includes(domain)) && orderPaths.some((path) => url.includes(path));
-  }
 
   function setLoading(loading: boolean): void {
     exportBtn.disabled = loading;

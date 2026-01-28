@@ -4,6 +4,19 @@
  */
 
 import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
+import {
+  parseDate,
+  filterYearsByDateRange,
+  buildOrderPageUrl,
+  getOrderHistoryBaseUrl,
+  extractAsinFromUrl,
+  isAdvertisementOrder,
+  convertOrdersToCSV,
+  extractOrderId,
+  extractOrderIdFromUrl,
+  extractPriceFromText,
+  parsePrice,
+} from '../utils';
 
 (function (): void {
   'use strict';
@@ -96,15 +109,7 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
     console.log('[Amazon Exporter] Found years:', years);
 
     // Filter years based on date range
-    let yearsToProcess = [...years];
-    if (!exportAll && startDate && endDate) {
-      const startYear = new Date(startDate).getFullYear();
-      const endYear = new Date(endDate).getFullYear();
-      yearsToProcess = years.filter((year) => {
-        const yearNum = parseInt(year);
-        return yearNum >= startYear && yearNum <= endYear;
-      });
-    }
+    const yearsToProcess = exportAll ? [...years] : filterYearsByDateRange(years, startDate, endDate);
 
     console.log('[Amazon Exporter] Years to process:', yearsToProcess);
 
@@ -125,7 +130,7 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
       currentStartIndex: 0,
       collectedOrders: [],
       seenOrderIds: [],
-      baseUrl: getOrderHistoryBaseUrl(),
+      baseUrl: getOrderHistoryBaseUrl(window.location.href),
     };
 
     saveExportState(state);
@@ -269,26 +274,6 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
     const yearProgress = state.currentYearIndex / state.yearsToProcess.length;
     const pageProgress = Math.min(state.currentStartIndex / 100, 0.9);
     return Math.floor((yearProgress + pageProgress / state.yearsToProcess.length) * 75) + 5;
-  }
-
-  /**
-   * Get the base URL for order history
-   */
-  function getOrderHistoryBaseUrl(): string {
-    const urlObj = new URL(window.location.href);
-    return `${urlObj.origin}/your-orders/orders`;
-  }
-
-  /**
-   * Build URL for a specific year and page
-   */
-  function buildOrderPageUrl(baseUrl: string, year: string, startIndex: number = 0): string {
-    const params = new URLSearchParams();
-    params.set('timeFilter', `year-${year}`);
-    if (startIndex > 0) {
-      params.set('startIndex', startIndex.toString());
-    }
-    return `${baseUrl}?${params.toString()}`;
   }
 
   /**
@@ -490,19 +475,16 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
     const orderText = orderEl.textContent || '';
 
     // Extract Order ID
-    const orderIdMatch = orderText.match(/\d{3}-\d{7}-\d{7}/);
-    if (orderIdMatch?.[0]) {
-      order.orderId = orderIdMatch[0];
-    }
+    order.orderId = extractOrderId(orderText) || '';
 
     // Try links for order ID
     if (!order.orderId) {
       const links = orderEl.querySelectorAll('a[href]');
       for (const link of links) {
         const href = link.getAttribute('href') || '';
-        const urlMatch = href.match(/orderI[Dd]=(\d{3}-\d{7}-\d{7})/);
-        if (urlMatch?.[1]) {
-          order.orderId = urlMatch[1];
+        const orderId = extractOrderIdFromUrl(href);
+        if (orderId) {
+          order.orderId = orderId;
           break;
         }
       }
@@ -515,10 +497,7 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
     if (detailsLink) {
       order.detailsUrl = detailsLink.href;
       if (!order.orderId) {
-        const urlMatch = order.detailsUrl.match(/orderI[Dd]=(\d{3}-\d{7}-\d{7})/i);
-        if (urlMatch?.[1]) {
-          order.orderId = urlMatch[1];
-        }
+        order.orderId = extractOrderIdFromUrl(order.detailsUrl) || '';
       }
     }
 
@@ -542,36 +521,10 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
     }
 
     // Extract Total Amount
-    const pricePatterns = [
-      /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€)?\s*([0-9.,]+)\s*(?:EUR|€)?/i,
-      /(?:EUR|€)\s*([0-9.,]+)/i,
-      /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/,
-      /(?:\$|£)\s*([0-9.,]+)/,
-    ];
-
-    for (const pattern of pricePatterns) {
-      const match = orderText.match(pattern);
-      if (match?.[1]) {
-        let priceStr = match[1];
-        // Handle European format
-        if (priceStr.includes(',') && priceStr.includes('.')) {
-          priceStr = priceStr.replace(/\./g, '').replace(',', '.');
-        } else if (priceStr.includes(',')) {
-          priceStr = priceStr.replace(',', '.');
-        }
-        const amount = parseFloat(priceStr);
-        if (!isNaN(amount) && amount > 0) {
-          order.totalAmount = amount;
-          if (orderText.includes('€') || orderText.includes('EUR')) {
-            order.currency = 'EUR';
-          } else if (orderText.includes('£')) {
-            order.currency = 'GBP';
-          } else if (orderText.includes('$')) {
-            order.currency = 'USD';
-          }
-          break;
-        }
-      }
+    const priceResult = extractPriceFromText(orderText);
+    if (priceResult) {
+      order.totalAmount = priceResult.amount;
+      order.currency = priceResult.currency;
     }
 
     // Extract Order Status
@@ -603,43 +556,6 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
   }
 
   /**
-   * Check if an order is actually an advertisement/recommendation block
-   */
-  function isAdvertisementOrder(order: Order): boolean {
-    // No order date is a strong indicator of a fake order
-    if (!order.orderDate) {
-      // Check if items contain known advertisement patterns
-      const adPatterns = [
-        /amazon\s*visa/i,
-        /barclays\s*finanzierung/i,
-        /amazon\s*business.*card/i,
-        /kreditkarte/i,
-        /finanzierung/i,
-        /prime.*card/i,
-        /amazon.*amex/i,
-      ];
-
-      const hasAdItem = order.items.some((item) =>
-        adPatterns.some((pattern) => pattern.test(item.title))
-      );
-
-      if (hasAdItem) {
-        return true;
-      }
-
-      // If no date, no status, no details URL, and all items have price 0 - likely an ad
-      if (!order.orderStatus && !order.detailsUrl) {
-        const allPricesZero = order.items.every((item) => item.price === 0);
-        if (allPricesZero && order.items.length > 5) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Parse items from an order element
    */
   function parseOrderItems(orderEl: Element): OrderItem[] {
@@ -651,10 +567,9 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
 
     productLinks.forEach((link) => {
       const href = link.getAttribute('href') || (link as HTMLAnchorElement).href || '';
-      const asinMatch = href.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-      if (!asinMatch?.[1]) return;
+      const asin = extractAsinFromUrl(href);
+      if (!asin) return;
 
-      const asin = asinMatch[1].toUpperCase();
       if (seenAsins.has(asin)) return;
       seenAsins.add(asin);
 
@@ -805,8 +720,8 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
         const matches = text.matchAll(pattern);
         for (const match of matches) {
           if (match[1]) {
-            const price = parseFloat(match[1].replace(',', '.'));
-            if (!isNaN(price) && price > 0) {
+            const price = parsePrice(match[1]);
+            if (price > 0) {
               // Store the first valid price found for this ASIN
               if (!asinPriceMap.has(asin)) {
                 asinPriceMap.set(asin, price);
@@ -828,8 +743,8 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
         // Look for item-specific discounts
         const discountMatch = rowText.match(/(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i);
         if (discountMatch?.[2]) {
-          const discountAmount = parseFloat(discountMatch[2].replace(',', '.'));
-          if (!isNaN(discountAmount)) {
+          const discountAmount = parsePrice(discountMatch[2]);
+          if (discountAmount > 0) {
             console.log(`[Amazon Exporter] Found discount in summary: ${discountAmount}`);
           }
         }
@@ -855,8 +770,8 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
         const asinRegex = new RegExp(item.asin + '[^€]*(?:EUR|€)\\s*([0-9]+[.,][0-9]{2})', 'i');
         const match = pageText.match(asinRegex);
         if (match?.[1]) {
-          const price = parseFloat(match[1].replace(',', '.'));
-          if (!isNaN(price) && price > 0) {
+          const price = parsePrice(match[1]);
+          if (price > 0) {
             item.price = price;
           }
         }
@@ -900,8 +815,8 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
         for (const pattern of savingsPatterns) {
           const match = text.match(pattern);
           if (match?.[1]) {
-            const amount = parseFloat(match[1].replace(',', '.'));
-            if (!isNaN(amount) && amount > 0) {
+            const amount = parsePrice(match[1]);
+            if (amount > 0) {
               const description = text.replace(/\s+/g, ' ').trim().substring(0, 100);
               // Avoid duplicate promotions
               if (!promotions.some((p) => Math.abs(p.amount - amount) < 0.01 && p.description === description)) {
@@ -928,8 +843,8 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
         if (/Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot/i.test(text)) {
           const amountMatch = text.match(/-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€)?/);
           if (amountMatch?.[1]) {
-            const amount = parseFloat(amountMatch[1].replace(',', '.'));
-            if (!isNaN(amount) && amount > 0) {
+            const amount = parsePrice(amountMatch[1]);
+            if (amount > 0) {
               const description = text.replace(/\s+/g, ' ').trim().substring(0, 100);
               if (!promotions.some((p) => Math.abs(p.amount - amount) < 0.01)) {
                 promotions.push({ description, amount });
@@ -967,146 +882,10 @@ import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '..
   }
 
   /**
-   * Parse date string to ISO format
-   */
-  function parseDate(dateText: string): string | null {
-    if (!dateText) return null;
-
-    const germanMonths: Record<string, number> = {
-      januar: 1,
-      februar: 2,
-      märz: 3,
-      april: 4,
-      mai: 5,
-      juni: 6,
-      juli: 7,
-      august: 8,
-      september: 9,
-      oktober: 10,
-      november: 11,
-      dezember: 12,
-    };
-
-    const englishMonths: Record<string, number> = {
-      january: 1,
-      february: 2,
-      march: 3,
-      april: 4,
-      may: 5,
-      june: 6,
-      july: 7,
-      august: 8,
-      september: 9,
-      october: 10,
-      november: 11,
-      december: 12,
-    };
-
-    const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths };
-    const cleanText = dateText.trim().toLowerCase();
-
-    // German: "15. Januar 2024"
-    const germanMatch = cleanText.match(/(\d{1,2})\.?\s*([a-zäöü]+)\s*(\d{4})/i);
-    if (germanMatch) {
-      const day = parseInt(germanMatch[1] || '0', 10);
-      const monthName = (germanMatch[2] || '').toLowerCase();
-      const year = parseInt(germanMatch[3] || '0', 10);
-
-      if (year >= 2000 && year <= 2100 && allMonths[monthName]) {
-        const month = allMonths[monthName];
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-    }
-
-    // English: "January 15, 2024"
-    const englishMatch = cleanText.match(/([a-z]+)\s+(\d{1,2}),?\s*(\d{4})/i);
-    if (englishMatch) {
-      const monthName = (englishMatch[1] || '').toLowerCase();
-      const day = parseInt(englishMatch[2] || '0', 10);
-      const year = parseInt(englishMatch[3] || '0', 10);
-
-      if (year >= 2000 && year <= 2100 && allMonths[monthName]) {
-        const month = allMonths[monthName];
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Convert orders to CSV format
+   * Convert orders to CSV format (wrapper using utility function)
    */
   function convertToCSV(orders: Order[]): string {
-    const headers = [
-      getMessage('csvHeaderOrderId'),
-      getMessage('csvHeaderOrderDate'),
-      getMessage('csvHeaderTotalAmount'),
-      getMessage('csvHeaderCurrency'),
-      getMessage('csvHeaderTotalSavings'),
-      getMessage('csvHeaderStatus'),
-      getMessage('csvHeaderItemTitle'),
-      getMessage('csvHeaderItemAsin'),
-      getMessage('csvHeaderItemQuantity'),
-      getMessage('csvHeaderItemPrice'),
-      getMessage('csvHeaderItemDiscount'),
-      getMessage('csvHeaderPromotions'),
-      getMessage('csvHeaderItemUrl'),
-      getMessage('csvHeaderDetailsUrl'),
-    ];
-
-    const rows: string[] = [headers.join(',')];
-
-    orders.forEach((order) => {
-      const promotionsStr = order.promotions
-        .map((p) => `${p.description}: €${p.amount}`)
-        .join('; ')
-        .replace(/"/g, '""');
-
-      if (order.items.length === 0) {
-        rows.push(
-          [
-            `"${order.orderId}"`,
-            `"${order.orderDate}"`,
-            order.totalAmount,
-            `"${order.currency}"`,
-            order.totalSavings,
-            `"${(order.orderStatus || '').replace(/"/g, '""')}"`,
-            '',
-            '',
-            '',
-            '',
-            '',
-            `"${promotionsStr}"`,
-            '',
-            `"${order.detailsUrl}"`,
-          ].join(',')
-        );
-      } else {
-        order.items.forEach((item, index) => {
-          rows.push(
-            [
-              `"${order.orderId}"`,
-              `"${order.orderDate}"`,
-              order.totalAmount,
-              `"${order.currency}"`,
-              index === 0 ? order.totalSavings : '', // Only show savings on first item row
-              `"${(order.orderStatus || '').replace(/"/g, '""')}"`,
-              `"${(item.title || '').replace(/"/g, '""')}"`,
-              `"${item.asin}"`,
-              item.quantity,
-              item.price,
-              item.discount,
-              index === 0 ? `"${promotionsStr}"` : '', // Only show promotions on first item row
-              `"${item.itemUrl}"`,
-              `"${order.detailsUrl}"`,
-            ].join(',')
-          );
-        });
-      }
-    });
-
-    return rows.join('\n');
+    return convertOrdersToCSV(orders, getMessage);
   }
 
   /**
