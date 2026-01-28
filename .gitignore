@@ -1,29 +1,99 @@
 # Dependencies
 node_modules/
+.pnp/
+.pnp.js
+.yarn/
 
 # Build output
 dist/
+build/
+out/
+*.zip
+*.crx
+*.xpi
 
-# IDE
+# IDE and editors
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea/
 *.swp
 *.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment
+# Environment and secrets
 .env
-.env.local
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Test coverage
 coverage/
+.nyc_output/
 
 # TypeScript cache
 *.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+*.turbo/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Debug
+.debug/
+
+# Package manager lock files (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Web extension specific
+web-ext-artifacts/
+.web-extension-id
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
