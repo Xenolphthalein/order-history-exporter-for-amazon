@@ -3,7 +3,7 @@
  * Scrapes order data from Amazon order history pages using browser navigation
  */
 
-import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
+import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
 
 (function (): void {
   'use strict';
@@ -475,6 +475,8 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
       items: [],
       orderStatus: '',
       detailsUrl: '',
+      promotions: [],
+      totalSavings: 0,
     };
 
     const orderText = orderEl.textContent || '';
@@ -582,7 +584,51 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
     // Extract Items
     order.items = parseOrderItems(orderEl);
 
+    // Filter out advertisement/fake orders
+    // These typically have no date, no status, no details URL, and contain ads like "Amazon Visa"
+    if (isAdvertisementOrder(order)) {
+      console.log('[Amazon Exporter] Skipping advertisement order:', order.orderId);
+      return null;
+    }
+
     return order;
+  }
+
+  /**
+   * Check if an order is actually an advertisement/recommendation block
+   */
+  function isAdvertisementOrder(order: Order): boolean {
+    // No order date is a strong indicator of a fake order
+    if (!order.orderDate) {
+      // Check if items contain known advertisement patterns
+      const adPatterns = [
+        /amazon\s*visa/i,
+        /barclays\s*finanzierung/i,
+        /amazon\s*business.*card/i,
+        /kreditkarte/i,
+        /finanzierung/i,
+        /prime.*card/i,
+        /amazon.*amex/i,
+      ];
+
+      const hasAdItem = order.items.some((item) =>
+        adPatterns.some((pattern) => pattern.test(item.title))
+      );
+
+      if (hasAdItem) {
+        return true;
+      }
+
+      // If no date, no status, no details URL, and all items have price 0 - likely an ad
+      if (!order.orderStatus && !order.detailsUrl) {
+        const allPricesZero = order.items.every((item) => item.price === 0);
+        if (allPricesZero && order.items.length > 5) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -609,6 +655,7 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
         asin: asin,
         quantity: 1,
         price: 0,
+        discount: 0,
         itemUrl: `https://www.amazon.de/dp/${asin}`,
       };
 
@@ -638,15 +685,39 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
 
       item.title = title.replace(/\s+/g, ' ').trim();
 
-      // Get quantity
+      // Get quantity - first look for the visual quantity badge
+      let foundQuantity = false;
       let parentEl = link.parentElement;
-      for (let i = 0; i < 8 && parentEl; i++) {
-        const qtyMatch = (parentEl.textContent || '').match(/(?:Qty|Quantity|Menge|Anzahl)[:\s]*(\d+)/i);
-        if (qtyMatch?.[1]) {
-          item.quantity = parseInt(qtyMatch[1], 10);
-          break;
+      
+      // Look for the quantity badge element (product-image__qty)
+      for (let i = 0; i < 10 && parentEl && !foundQuantity; i++) {
+        const qtyBadge = parentEl.querySelector('.product-image__qty, [class*="qty-badge"], [class*="quantity-badge"]');
+        if (qtyBadge) {
+          const qtyText = qtyBadge.textContent?.trim();
+          if (qtyText) {
+            const qty = parseInt(qtyText, 10);
+            if (!isNaN(qty) && qty > 0) {
+              item.quantity = qty;
+              foundQuantity = true;
+              break;
+            }
+          }
         }
         parentEl = parentEl.parentElement;
+      }
+
+      // Fallback: look for text patterns like "Qty: 2", "Menge: 2"
+      if (!foundQuantity) {
+        parentEl = link.parentElement;
+        for (let i = 0; i < 8 && parentEl; i++) {
+          const qtyMatch = (parentEl.textContent || '').match(/(?:Qty|Quantity|Menge|Anzahl)[:\s]*(\d+)/i);
+          if (qtyMatch?.[1]) {
+            item.quantity = parseInt(qtyMatch[1], 10);
+            foundQuantity = true;
+            break;
+          }
+          parentEl = parentEl.parentElement;
+        }
       }
 
       if (item.title || item.asin) {
@@ -658,25 +729,14 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
   }
 
   /**
-   * Fetch order details for item prices (only for multi-item orders)
+   * Fetch order details for item prices and discounts
    */
   async function fetchOrderDetailsForPrices(orders: Order[]): Promise<void> {
-    // Handle single-item orders - use total as price
-    orders.forEach((order) => {
-      if (order.items.length === 1 && order.totalAmount > 0) {
-        const firstItem = order.items[0];
-        if (firstItem) {
-          firstItem.price = order.totalAmount;
-        }
-      }
-    });
+    // We need to fetch details for all orders to get accurate pricing and discounts
+    // Even single-item orders can have discounts
+    const ordersNeedingDetails = orders.filter((order) => order.detailsUrl);
 
-    // Filter orders needing detail fetch
-    const ordersNeedingDetails = orders.filter(
-      (order) => order.items.length > 1 && order.items.some((item) => item.price === 0) && order.detailsUrl
-    );
-
-    console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'multi-item orders');
+    console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'orders');
 
     for (let i = 0; i < ordersNeedingDetails.length; i++) {
       const order = ordersNeedingDetails[i];
@@ -696,6 +756,7 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
         const doc = parser.parseFromString(html, 'text/html');
 
         parseItemPricesFromDetails(order, doc);
+        parsePromotionsFromDetails(order, doc);
 
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
@@ -711,9 +772,12 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
     const asinPriceMap = new Map<string, number>();
 
     // Look for product containers with prices
-    const containers = doc.querySelectorAll('.a-row, [class*="item"], [class*="product"]');
+    // Amazon order details page typically has items in table rows or specific containers
+    const itemContainers = doc.querySelectorAll(
+      '.a-row, [class*="shipment-item"], [class*="od-shipment-item"], tr, .a-fixed-left-grid-inner'
+    );
 
-    containers.forEach((container) => {
+    itemContainers.forEach((container) => {
       const link = container.querySelector('a[href*="/dp/"], a[href*="/gp/product/"]');
       if (!link) return;
 
@@ -723,24 +787,175 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
       const asin = asinMatch[1].toUpperCase();
       const text = container.textContent || '';
 
-      const priceMatch =
-        text.match(/(?:EUR|€)\s*([0-9]+[.,][0-9]{2})/i) || text.match(/([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/);
+      // Try multiple price patterns - look for the item price specifically
+      const pricePatterns = [
+        /(?:EUR|€)\s*([0-9]+[.,][0-9]{2})/gi,
+        /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
+      ];
 
-      if (priceMatch?.[1]) {
-        const price = parseFloat(priceMatch[1].replace(',', '.'));
-        if (!isNaN(price) && price > 0) {
-          asinPriceMap.set(asin, price);
+      for (const pattern of pricePatterns) {
+        const matches = text.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1]) {
+            const price = parseFloat(match[1].replace(',', '.'));
+            if (!isNaN(price) && price > 0) {
+              // Store the first valid price found for this ASIN
+              if (!asinPriceMap.has(asin)) {
+                asinPriceMap.set(asin, price);
+              }
+              break;
+            }
+          }
         }
+        if (asinPriceMap.has(asin)) break;
       }
     });
 
-    // Update items
+    // Also look for the order summary section for prices per item
+    const orderSummary = doc.querySelector('#orderSummary, .order-summary, [class*="order-summary"]');
+    if (orderSummary) {
+      const summaryRows = orderSummary.querySelectorAll('.a-row, tr');
+      summaryRows.forEach((row) => {
+        const rowText = row.textContent || '';
+        // Look for item-specific discounts
+        const discountMatch = rowText.match(/(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i);
+        if (discountMatch?.[2]) {
+          const discountAmount = parseFloat(discountMatch[2].replace(',', '.'));
+          if (!isNaN(discountAmount)) {
+            console.log(`[Amazon Exporter] Found discount in summary: ${discountAmount}`);
+          }
+        }
+      });
+    }
+
+    // Update items with found prices
     order.items.forEach((item) => {
       const price = asinPriceMap.get(item.asin);
       if (price !== undefined) {
         item.price = price;
       }
     });
+    
+    // If some items still have no price, try to find them in a more aggressive search
+    const itemsWithoutPrice = order.items.filter((item) => item.price === 0);
+    if (itemsWithoutPrice.length > 0) {
+      // Search the entire page for ASIN-price associations
+      const pageText = doc.body.textContent || '';
+      
+      itemsWithoutPrice.forEach((item) => {
+        // Look for price near the ASIN in the document
+        const asinRegex = new RegExp(item.asin + '[^€]*(?:EUR|€)\\s*([0-9]+[.,][0-9]{2})', 'i');
+        const match = pageText.match(asinRegex);
+        if (match?.[1]) {
+          const price = parseFloat(match[1].replace(',', '.'));
+          if (!isNaN(price) && price > 0) {
+            item.price = price;
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Parse promotions and discounts from order details page
+   */
+  function parsePromotionsFromDetails(order: Order, doc: Document): void {
+    const promotions: Promotion[] = [];
+    let totalSavings = 0;
+
+    // Look for various discount/promotion patterns in the order details
+    const promotionSelectors = [
+      '[class*="promotion"]',
+      '[class*="savings"]',
+      '[class*="discount"]',
+      '[class*="coupon"]',
+      '.a-color-success',
+      '.a-color-price',
+    ];
+
+    const checkedTexts = new Set<string>();
+
+    promotionSelectors.forEach((selector) => {
+      const elements = doc.querySelectorAll(selector);
+      elements.forEach((el) => {
+        const text = el.textContent?.trim() || '';
+        if (checkedTexts.has(text)) return;
+        checkedTexts.add(text);
+
+        // Look for savings/discount amounts
+        const savingsPatterns = [
+          /(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i,
+          /-\s*(?:EUR|€)\s*([0-9]+[.,][0-9]{2})/,
+          /(?:EUR|€)\s*-\s*([0-9]+[.,][0-9]{2})/,
+        ];
+
+        for (const pattern of savingsPatterns) {
+          const match = text.match(pattern);
+          if (match?.[1]) {
+            const amount = parseFloat(match[1].replace(',', '.'));
+            if (!isNaN(amount) && amount > 0) {
+              const description = text.replace(/\s+/g, ' ').trim().substring(0, 100);
+              // Avoid duplicate promotions
+              if (!promotions.some((p) => Math.abs(p.amount - amount) < 0.01 && p.description === description)) {
+                promotions.push({ description, amount });
+                totalSavings += amount;
+              }
+              break;
+            }
+          }
+        }
+      });
+    });
+
+    // Also check the order summary section for totals
+    const summarySection = doc.querySelector('#orderSummary, .order-summary, [class*="order-summary"], .a-box.order-summary');
+    if (summarySection) {
+      const rows = summarySection.querySelectorAll('.a-row, tr, div');
+      rows.forEach((row) => {
+        const text = row.textContent?.trim() || '';
+        if (checkedTexts.has(text)) return;
+        checkedTexts.add(text);
+
+        // Look for promotion lines
+        if (/Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot/i.test(text)) {
+          const amountMatch = text.match(/-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€)?/);
+          if (amountMatch?.[1]) {
+            const amount = parseFloat(amountMatch[1].replace(',', '.'));
+            if (!isNaN(amount) && amount > 0) {
+              const description = text.replace(/\s+/g, ' ').trim().substring(0, 100);
+              if (!promotions.some((p) => Math.abs(p.amount - amount) < 0.01)) {
+                promotions.push({ description, amount });
+                totalSavings += amount;
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Calculate if there's an unexplained discount (items total > order total)
+    const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (itemsTotal > order.totalAmount && order.totalAmount > 0) {
+      const unexplainedDiscount = Math.round((itemsTotal - order.totalAmount) * 100) / 100;
+      // Only add if we haven't already accounted for it
+      if (unexplainedDiscount > totalSavings + 0.01) {
+        const additionalDiscount = Math.round((unexplainedDiscount - totalSavings) * 100) / 100;
+        if (additionalDiscount > 0.01) {
+          promotions.push({
+            description: 'Additional discount',
+            amount: additionalDiscount,
+          });
+          totalSavings = unexplainedDiscount;
+        }
+      }
+    }
+
+    order.promotions = promotions;
+    order.totalSavings = Math.round(totalSavings * 100) / 100;
+    
+    if (promotions.length > 0) {
+      console.log(`[Amazon Exporter] Order ${order.orderId} has ${promotions.length} promotions, total savings: €${totalSavings}`);
+    }
   }
 
   /**
@@ -820,11 +1035,14 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
       'Order Date',
       'Total Amount',
       'Currency',
+      'Total Savings',
       'Status',
       'Item Title',
       'Item ASIN',
       'Item Quantity',
       'Item Price',
+      'Item Discount',
+      'Promotions',
       'Item URL',
       'Details URL',
     ];
@@ -832,6 +1050,11 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
     const rows: string[] = [headers.join(',')];
 
     orders.forEach((order) => {
+      const promotionsStr = order.promotions
+        .map((p) => `${p.description}: €${p.amount}`)
+        .join('; ')
+        .replace(/"/g, '""');
+
       if (order.items.length === 0) {
         rows.push(
           [
@@ -839,28 +1062,34 @@ import type { ExportOptions, ExportState, Order, OrderItem } from '../types';
             `"${order.orderDate}"`,
             order.totalAmount,
             `"${order.currency}"`,
+            order.totalSavings,
             `"${(order.orderStatus || '').replace(/"/g, '""')}"`,
             '',
             '',
             '',
             '',
             '',
+            `"${promotionsStr}"`,
+            '',
             `"${order.detailsUrl}"`,
           ].join(',')
         );
       } else {
-        order.items.forEach((item) => {
+        order.items.forEach((item, index) => {
           rows.push(
             [
               `"${order.orderId}"`,
               `"${order.orderDate}"`,
               order.totalAmount,
               `"${order.currency}"`,
+              index === 0 ? order.totalSavings : '', // Only show savings on first item row
               `"${(order.orderStatus || '').replace(/"/g, '""')}"`,
               `"${(item.title || '').replace(/"/g, '""')}"`,
               `"${item.asin}"`,
               item.quantity,
               item.price,
+              item.discount,
+              index === 0 ? `"${promotionsStr}"` : '', // Only show promotions on first item row
               `"${item.itemUrl}"`,
               `"${order.detailsUrl}"`,
             ].join(',')

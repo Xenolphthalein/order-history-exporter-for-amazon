@@ -7,6 +7,7 @@ export interface OrderItem {
   asin: string;
   quantity: number;
   price: number;
+  discount: number;
   itemUrl: string;
 }
 
@@ -18,6 +19,13 @@ export interface Order {
   items: OrderItem[];
   orderStatus: string;
   detailsUrl: string;
+  promotions: Promotion[];
+  totalSavings: number;
+}
+
+export interface Promotion {
+  description: string;
+  amount: number;
 }
 
 export interface ExportOptions {

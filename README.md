@@ -26,11 +26,19 @@ The data model for each order includes the following JSON fields:
             "asin": "string",
             "quantity": "number",
             "price": "number",
+            "discount": "number",
             "itemUrl": "string (URL to item page)"
         }
     ],
     "orderStatus": "string",
-    "detailsUrl": "string (URL to order details page)"
+    "detailsUrl": "string (URL to order details page)",
+    "promotions": [
+        {
+            "description": "string",
+            "amount": "number"
+        }
+    ],
+    "totalSavings": "number"
 }
 ```
 
@@ -38,5 +46,5 @@ The data model for each order includes the following JSON fields:
 The CSV export exports multiple rows for orders with multiple items. The columns are as follows:
 
 ```csv
-orderId, orderDate, totalAmount, currency, itemTitle, itemAsin, itemQuantity, itemPrice, itemUrl, orderStatus, detailsUrl
+Order ID, Order Date, Total Amount, Currency, Total Savings, Status, Item Title, Item ASIN, Item Quantity, Item Price, Item Discount, Promotions, Item URL, Details URL
 ```
