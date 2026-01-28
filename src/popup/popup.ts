@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dateRangeInputs = document.getElementById('date-range-inputs') as HTMLElement;
   const startDateInput = document.getElementById('startDate') as HTMLInputElement;
   const endDateInput = document.getElementById('endDate') as HTMLInputElement;
+  const settingsSection = document.getElementById('settings-section') as HTMLElement;
 
   // Set default date values
   const today = new Date();
@@ -98,7 +99,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Start export
+    // Start export - hide settings and show progress
+    settingsSection.classList.add('hidden');
+    exportBtn.classList.add('hidden');
     showProgress(0, getMessage('exportStartedMessage'));
     showStatus(
       getMessage('exportStartedStatus'),
@@ -107,6 +110,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (!currentTab?.id) {
+        settingsSection.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
+        hideProgress();
         showStatus(getMessage('errorGetTab'), 'error');
         return;
       }
@@ -130,10 +136,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           'success'
         );
       } else {
+        settingsSection.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
+        hideProgress();
         showStatus(response.error || getMessage('exportFailedGeneric'), 'error');
       }
     } catch (error) {
       console.error('Export error:', error);
+      settingsSection.classList.remove('hidden');
+      exportBtn.classList.remove('hidden');
+      hideProgress();
       showStatus(
         getMessage('exportFailedRefresh'),
         'error'
@@ -147,8 +159,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (msg.action === 'updateProgress' && msg.data) {
       showProgress(msg.data.percent, msg.data.message);
 
-      // If complete, show success message
+      // If complete, show success message and restore UI
       if (msg.data.percent >= 100) {
+        settingsSection.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
         showStatus(msg.data.message, 'success');
       }
     }

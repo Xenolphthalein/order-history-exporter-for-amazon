@@ -20,44 +20,46 @@
     </div>
 
     <div id="main-content" class="hidden">
-      <section class="section">
-        <h2 data-i18n="exportRange">Export Range</h2>
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" name="exportRange" value="all" checked>
-            <span data-i18n="exportAllOrders">Export all orders</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="exportRange" value="dateRange">
-            <span data-i18n="selectDateRange">Select date range</span>
-          </label>
-        </div>
-
-        <div id="date-range-inputs" class="date-inputs hidden">
-          <div class="input-group">
-            <label for="startDate" data-i18n="startDate">Start Date:</label>
-            <input type="date" id="startDate">
+      <div id="settings-section">
+        <section class="section">
+          <h2 data-i18n="exportRange">Export Range</h2>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="exportRange" value="all" checked>
+              <span data-i18n="exportAllOrders">Export all orders</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="exportRange" value="dateRange">
+              <span data-i18n="selectDateRange">Select date range</span>
+            </label>
           </div>
-          <div class="input-group">
-            <label for="endDate" data-i18n="endDate">End Date:</label>
-            <input type="date" id="endDate">
-          </div>
-        </div>
-      </section>
 
-      <section class="section">
-        <h2 data-i18n="exportFormat">Export Format</h2>
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" name="exportFormat" value="json" checked>
-            <span>JSON</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="exportFormat" value="csv">
-            <span>CSV</span>
-          </label>
-        </div>
-      </section>
+          <div id="date-range-inputs" class="date-inputs hidden">
+            <div class="input-group">
+              <label for="startDate" data-i18n="startDate">Start Date:</label>
+              <input type="date" id="startDate">
+            </div>
+            <div class="input-group">
+              <label for="endDate" data-i18n="endDate">End Date:</label>
+              <input type="date" id="endDate">
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 data-i18n="exportFormat">Export Format</h2>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="exportFormat" value="json" checked>
+              <span>JSON</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="exportFormat" value="csv">
+              <span>CSV</span>
+            </label>
+          </div>
+        </section>
+      </div>
 
       <section class="section">
         <button id="exportBtn" class="btn btn-primary">

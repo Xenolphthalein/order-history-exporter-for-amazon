@@ -245,3 +245,8 @@ footer a:hover {
 .hidden {
   display: none !important;
 }
+
+/* Smooth transition for settings visibility */
+#settings-section {
+  transition: opacity 0.2s ease;
+}
