@@ -3,8 +3,8 @@
 # Order History Exporter for Amazon
 
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
-[![Firefox](https://img.shields.io/badge/Firefox-Extension-FF7139?logo=firefox&logoColor=white)](https://www.mozilla.org/firefox/)
-[![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://www.google.com/chrome/)
+[![Firefox Add-ons](https://img.shields.io/amo/v/order-history-exporter-amazon?label=Firefox%20Add-ons&logo=firefox&logoColor=white)](https://addons.mozilla.org/de/firefox/addon/order-history-exporter-amazon/)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fipfbjgikgcggcebnefmamgemoehfgof?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/order-history-exporter-fo/fipfbjgikgcggcebnefmamgemoehfgof)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 Browser extension for exporting your Amazon order history to JSON or CSV format. Supports both **Firefox** and **Chromium-based browsers** (Chrome, Edge, Brave, etc.). While it is designed for use with [Toolbox for Firefly III](https://github.com/xenolphthalein/toolbox-for-firefly-iii) to enrich financial transactions with Amazon order details, it can be used independently for personal record-keeping or data analysis.
@@ -17,6 +17,7 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Installation](#installation)
+    - [From Browser Stores](#from-browser-stores)
     - [From Source](#from-source)
   - [Usage](#usage)
   - [Data Exported](#data-exported)
@@ -38,6 +39,11 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
 ---
 
 ## Installation
+
+### From Browser Stores
+
+- Chrome Web Store: https://chromewebstore.google.com/detail/order-history-exporter-fo/fipfbjgikgcggcebnefmamgemoehfgof
+- Firefox Add-ons: https://addons.mozilla.org/de/firefox/addon/order-history-exporter-amazon/
 
 ### From Source
 
