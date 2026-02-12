@@ -32,7 +32,22 @@ const englishMonths: Record<string, number> = {
   december: 12,
 };
 
-const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths };
+const frenchMonths: Record<string, number> = {
+  "janvier": 1, 
+  "février": 2, 
+  "mars": 3, 
+  "avril": 4,
+  "mai": 5, 
+  "juin": 6, 
+  "juillet": 7,
+  "aout": 8,     
+  "septembre": 9, 
+  "octobre": 10, 
+  "novembre": 11, 
+  "decembre": 12
+};
+
+const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths, ...frenchMonths };
 
 /**
  * Parse date string to ISO format (YYYY-MM-DD)
@@ -67,6 +82,18 @@ export function parseDate(dateText: string): string | null {
       const month = allMonths[monthName];
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
+  }
+
+  const frenchMatch = cleanText.match(/(\d{1,2})\s+([a-zéû]+)\s+(\d{4})/i);
+  if (frenchMatch) {
+      const day = parseInt(frenchMatch[1], 10);
+      const monthName = frenchMatch[2].toLowerCase();
+      const year = parseInt(frenchMatch[3], 10);
+  
+      if (year >= 2000 && year <= 2100 && frenchMonths[monthName]) {
+          const month = frenchMonths[monthName];
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
   }
 
   return null;
