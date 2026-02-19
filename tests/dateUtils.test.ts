@@ -50,6 +50,32 @@ describe('parseDate', () => {
     });
   });
 
+  describe('French date format', () => {
+    it('should parse "15 janvier 2024"', () => {
+      expect(parseDate('15 janvier 2024')).toBe('2024-01-15');
+    });
+
+    it('should parse "1 février 2023"', () => {
+      expect(parseDate('1 février 2023')).toBe('2023-02-01');
+    });
+
+    it('should parse "1 fevrier 2023" (without accent)', () => {
+      expect(parseDate('1 fevrier 2023')).toBe('2023-02-01');
+    });
+
+    it('should parse "10 août 2024"', () => {
+      expect(parseDate('10 août 2024')).toBe('2024-08-10');
+    });
+
+    it('should parse "31 décembre 2022"', () => {
+      expect(parseDate('31 décembre 2022')).toBe('2022-12-31');
+    });
+
+    it('should parse "1er janvier 2024"', () => {
+      expect(parseDate('1er janvier 2024')).toBe('2024-01-01');
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty string', () => {
       expect(parseDate('')).toBeNull();

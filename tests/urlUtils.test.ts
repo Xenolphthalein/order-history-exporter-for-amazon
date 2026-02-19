@@ -59,6 +59,10 @@ describe('isAmazonOrderHistoryPage', () => {
     it('should return true for amazon.co.jp order history', () => {
       expect(isAmazonOrderHistoryPage('https://www.amazon.co.jp/your-orders')).toBe(true);
     });
+
+    it('should return true for amazon.com.be order history', () => {
+      expect(isAmazonOrderHistoryPage('https://www.amazon.com.be/your-orders/orders')).toBe(true);
+    });
   });
 
   describe('invalid pages', () => {
@@ -138,6 +142,7 @@ describe('constants', () => {
     expect(AMAZON_DOMAINS).toContain('amazon.com');
     expect(AMAZON_DOMAINS).toContain('amazon.de');
     expect(AMAZON_DOMAINS).toContain('amazon.co.uk');
+    expect(AMAZON_DOMAINS).toContain('amazon.com.be');
     expect(AMAZON_DOMAINS.length).toBeGreaterThan(5);
   });
 

@@ -30,6 +30,7 @@ export const AMAZON_DOMAINS = [
   'amazon.com.au',
   'amazon.com.br',
   'amazon.com.mx',
+  'amazon.com.be',
 ];
 
 /**
