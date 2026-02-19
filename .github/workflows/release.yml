@@ -385,31 +385,42 @@ jobs:
 
           # Step 2: Poll for validation to complete
           echo "Waiting for AMO validation..."
-          validated="false"
-          for i in {1..30}; do
-            sleep 10
+          validation_completed="false"
+          MAX_VALIDATION_ATTEMPTS=90
+          VALIDATION_POLL_SECONDS=10
+          for ((i=1; i<=MAX_VALIDATION_ATTEMPTS; i++)); do
+            sleep "$VALIDATION_POLL_SECONDS"
 
             validation_response=$(curl -sS -X GET "${AMO_BASE}/addons/upload/${upload_uuid}/" \
               -H "Authorization: JWT $(generate_jwt)")
 
-            validated=$(echo "$validation_response" | jq -r '.validated // "false"')
+            if echo "$validation_response" | jq -e '.detail? != null' >/dev/null; then
+              echo "AMO upload status API returned an error"
+              echo "$validation_response"
+              exit 1
+            fi
+
+            processed=$(echo "$validation_response" | jq -r '.processed // empty')
+            validated=$(echo "$validation_response" | jq -r '.validated // empty')
             valid=$(echo "$validation_response" | jq -r '.valid // "false"')
 
-            if [ "$validated" = "true" ]; then
+            if [ "$processed" = "true" ] || [ "$validated" = "true" ]; then
+              validation_completed="true"
               if [ "$valid" = "true" ]; then
                 echo "Validation passed"
                 break
               else
                 echo "AMO validation failed"
-                echo "$validation_response" | jq '.validation'
+                echo "$validation_response" | jq '.validation // .validation_results // .'
                 exit 1
               fi
             fi
-            echo "  Validation in progress (attempt ${i}/30)..."
+            echo "  Validation in progress (attempt ${i}/${MAX_VALIDATION_ATTEMPTS}, processed=${processed:-unknown}, validated=${validated:-unknown})..."
           done
 
-          if [ "$validated" != "true" ]; then
-            echo "AMO validation did not complete within timeout"
+          if [ "$validation_completed" != "true" ]; then
+            echo "AMO validation did not complete within timeout (${MAX_VALIDATION_ATTEMPTS} attempts, ${VALIDATION_POLL_SECONDS}s interval)"
+            echo "$validation_response"
             exit 1
           fi
 
