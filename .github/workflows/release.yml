@@ -216,17 +216,23 @@ jobs:
             -H "Content-Type: application/zip" \
             --data-binary "@${CHROME_ZIP_PATH}")
 
+          if echo "$upload_response" | jq -e '.error? != null' >/dev/null; then
+            echo "Chrome upload API returned an error"
+            echo "$upload_response"
+            exit 1
+          fi
+
           latest_upload_response="$upload_response"
-          upload_state=$(echo "$upload_response" | jq -r '.uploadState // empty')
+          upload_state=$(echo "$upload_response" | jq -r '.uploadState // .state // empty')
           is_upload_in_progress() {
             case "$1" in
-              UPLOAD_STATE_IN_PROGRESS|IN_PROGRESS) return 0 ;;
+              UPLOAD_STATE_IN_PROGRESS|IN_PROGRESS|PENDING) return 0 ;;
               *) return 1 ;;
             esac
           }
           is_upload_success() {
             case "$1" in
-              UPLOAD_STATE_SUCCESS|SUCCEEDED) return 0 ;;
+              UPLOAD_STATE_SUCCESS|SUCCEEDED|SUCCESS) return 0 ;;
               *) return 1 ;;
             esac
           }
@@ -238,8 +244,14 @@ jobs:
                 -H "Authorization: Bearer ${access_token}" \
                 -H "x-goog-api-version: 2")
 
+              if echo "$status_response" | jq -e '.error? != null' >/dev/null; then
+                echo "Chrome fetchStatus API returned an error"
+                echo "$status_response"
+                exit 1
+              fi
+
               latest_upload_response="$status_response"
-              upload_state=$(echo "$status_response" | jq -r '.uploadState // empty')
+              upload_state=$(echo "$status_response" | jq -r '.uploadState // .state // empty')
               ! is_upload_in_progress "$upload_state" && break
             done
           fi
@@ -255,17 +267,33 @@ jobs:
             -H "Authorization: Bearer ${access_token}" \
             -H "x-goog-api-version: 2")
 
-          publish_status=$(echo "$publish_response" | jq -r '.status[]?')
-          if [ -z "$publish_status" ]; then
+          if echo "$publish_response" | jq -e '.error? != null' >/dev/null; then
+            echo "Chrome publish API returned an error"
+            echo "$publish_response"
+            exit 1
+          fi
+
+          publish_status_values=$(echo "$publish_response" | jq -r '[.status[]?, .state // empty] | map(select(. != "")) | .[]')
+          if [ -z "$publish_status_values" ]; then
             echo "Unexpected publish response from Chrome Web Store API"
             echo "$publish_response"
             exit 1
           fi
 
-          if echo "$publish_status" | grep -Eq '^(OK|ITEM_PENDING_REVIEW)$'; then
-            echo "Chrome Web Store publish status: $publish_status"
-          else
-            echo "Chrome Web Store publish returned non-success status"
+          publish_ok=1
+          while IFS= read -r publish_status; do
+            case "$publish_status" in
+              OK|ITEM_PENDING_REVIEW|PENDING_REVIEW|IN_REVIEW|PUBLISHED)
+                echo "Chrome Web Store publish status: $publish_status"
+                ;;
+              *)
+                echo "Chrome Web Store publish returned non-success status: $publish_status"
+                publish_ok=0
+                ;;
+            esac
+          done <<< "$publish_status_values"
+
+          if [ "$publish_ok" -ne 1 ]; then
             echo "$publish_response"
             exit 1
           fi
