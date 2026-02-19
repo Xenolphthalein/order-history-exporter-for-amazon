@@ -1,265 +1,133 @@
-# AGENTS.md — Universal Default Guide for AI Coding Agents
+# AGENTS.md - Order History Exporter for Amazon
 
 ## Purpose
 
-This file provides AI coding agents with a complete, self-contained set of rules, standards, and workflows to safely and effectively create, modify, or maintain code in this repository.
+This guide defines how AI coding agents should work in this repository.
+It combines project-specific workflows with general engineering guardrails.
 
-It is designed to be **project-agnostic** and requires **no manual customization**.
-When project-specific details exist, the agent must infer them from the repository structure and existing code.
+## Project Snapshot
 
----
+- TypeScript browser extension for exporting Amazon orders as JSON/CSV.
+- Dual browser targets:
+  - Firefox (Manifest V2, background script bundle format `iife`)
+  - Chrome/Chromium (Manifest V3, service worker bundle format `esm`)
+- Build output is generated under `dist/` and should not be edited manually.
 
-## Project Assumptions (Default)
+## Repository Map
 
-Unless the repository explicitly indicates otherwise, assume the following:
+- `src/background/background.ts`: download handling and runtime message bridge.
+- `src/content/content.ts`: scraping/export orchestration across Amazon order pages.
+- `src/popup/*`: popup UI (HTML/CSS/TS) and user interaction.
+- `src/utils/*.ts`: parsing, URL, date, CSV, and order utility logic.
+- `src/types/index.ts`: shared data contracts for export flow and messages.
+- `src/manifest.firefox.json`: Firefox MV2 manifest.
+- `src/manifest.chrome.json`: Chrome MV3 manifest.
+- `src/_locales/*/messages.json`: i18n strings.
+- `tests/*.test.ts`: Vitest unit tests (primarily utility coverage).
+- `build.js`: esbuild-based build pipeline for all browser targets.
+- `.husky/pre-commit`: git pre-commit quality gate.
 
-* The project is actively maintained
-* Code quality, correctness, and clarity are priorities
-* Backward compatibility matters unless stated otherwise
-* Tests are expected when behavior changes
-* The repository already contains the authoritative patterns
+## Safety and Scope
 
-**The existing codebase is the single source of truth.**
+1. Preserve behavior unless the task explicitly requests behavior changes.
+2. Keep changes minimal and reversible.
+3. Do not run long-lived or interactive commands unless explicitly requested, including:
+   - `npm run watch`
+   - `npm run test:watch`
+   - browser launch/debug commands
+4. Do not manually edit generated output in `dist/`.
+5. Never commit secrets, personal data, or scraped order data.
 
----
+## Core Architecture Rules
 
-## Repository Structure (Observed, Not Assumed)
-
-The agent must infer structure dynamically. Common directories may include:
-
-* `src/` — Primary application or library code
-* `lib/` — Compiled or shared library output
-* `tests/` or `__tests__/` — Automated tests
-* `docs/` — Documentation
-* `scripts/` — Automation and tooling scripts
-* `config/` or root config files — Tooling and environment configuration
-
-If a directory exists, respect its purpose as demonstrated by its contents.
-
----
-
-## Critical Safety Rules
-
-### Do Not Execute Long-Running or Interactive Commands
-
-**NEVER** run commands that:
-
-* Start servers
-* Launch watchers
-* Require user input
-* Block execution indefinitely
-
-Examples (non-exhaustive):
-
-* `npm start`
-* `npm run dev`
-* `python main.py`
-* `docker compose up`
-
-Only run such commands if the user explicitly asks.
-
----
-
-### Preserve Existing Behavior
-
-* Do not change external behavior unless explicitly requested
-* Avoid breaking public APIs
-* Maintain backward compatibility by default
-* Refactors must not alter logic unless stated
-
----
+1. Keep responsibilities separated:
+   - Popup handles UX only.
+   - Content script handles scraping/export state.
+   - Background handles downloads and message fan-out.
+2. Reuse `src/utils` and `src/types` instead of duplicating logic in scripts.
+3. Preserve cross-browser behavior:
+   - Chrome service worker constraints (no Blob URL assumption).
+   - Firefox background script behavior.
+4. If permissions, URL matches, or extension entry points change, update both manifests unless intentionally browser-specific.
+5. If exported data shape changes, update all affected layers:
+   - `src/types/index.ts`
+   - JSON/CSV generation paths
+   - tests
+   - README export schema docs
 
 ## Coding Conventions
 
-### Follow What Exists
+1. Follow existing patterns in nearby files before introducing anything new.
+2. Keep TypeScript strictness intact (`tsconfig.json` rules are intentional).
+3. Prefer explicit, readable code over clever abstractions.
+4. Handle runtime errors explicitly; do not silently swallow failures unless there is a clear boundary reason.
+5. Keep comments focused on intent when code is non-obvious; avoid redundant comments.
+6. Keep i18n keys synchronized across locale files when changing user-facing strings.
 
-Before writing new code:
+## Error Handling and Logging
 
-1. Inspect nearby files
-2. Match naming, formatting, and structure
-3. Reuse established abstractions
-
-**Never introduce new architectural patterns unless required.**
-
----
-
-### File Naming
-
-* Match the dominant style in the repository
-* If no dominant style exists:
-
-  * `snake_case` for Python
-  * `camelCase` or `kebab-case` for JavaScript/TypeScript
-  * `PascalCase` for classes and types
-* Be consistent within the same directory
-
----
-
-### Language Standards (Universal Defaults)
-
-Apply these unless existing code dictates otherwise:
-
-* Prefer explicit types where supported
-* Avoid implicit globals
-* Handle errors explicitly
-* Favor readability over cleverness
-* Avoid premature optimization
-
----
-
-### Comments & Documentation
-
-* Public APIs must be documented
-* Internal code should be self-explanatory
-* Inline comments are allowed only when intent is non-obvious
-* Do not restate what the code already clearly expresses
-
----
-
-## Architecture Principles
-
-### Separation of Concerns
-
-* Business logic must not depend on UI, transport, or framework layers
-* Side effects (I/O, network, filesystem) should be isolated
-* Configuration should not be hard-coded
-
----
-
-### Dependency Direction
-
-* High-level modules must not depend on low-level implementation details
-* Prefer dependency injection or inversion where patterns already exist
-
----
-
-## Error Handling
-
-### Strategy
-
-* Fail fast on programmer errors
-* Gracefully handle runtime and external failures
-* Never silently swallow errors
-
-### Logging Errors
-
-* Log errors once, at the appropriate boundary
-* Preserve stack traces when available
-* Re-throw after logging unless explicitly handled
-
----
-
-## Logging Standards
-
-### Levels
-
-* `error` — Unrecoverable failures
-* `warn` — Recoverable but notable issues
-* `info` — Significant lifecycle events
-* `debug` — Diagnostic details
-
-### Prohibited Logging
-
-* Credentials
-* Tokens or secrets
-* Personal data
-* Entire request/response payloads
-
----
+1. Fail fast on programmer errors and guard against external/runtime failures.
+2. Log at the boundary where failures are actionable.
+3. Do not log sensitive content (credentials, tokens, personal data, full payload dumps).
+4. Keep existing `console` usage patterns unless a task asks for broader logging changes.
 
 ## Testing Expectations
 
-### When to Add Tests
+Add or update tests for behavior changes, bug fixes, or non-trivial refactors.
 
-Tests are required when:
+- `src/utils/dateUtils.ts` -> `tests/dateUtils.test.ts`
+- `src/utils/priceUtils.ts` -> `tests/priceUtils.test.ts`
+- `src/utils/orderUtils.ts` -> `tests/orderUtils.test.ts`
+- `src/utils/csvUtils.ts` -> `tests/csvUtils.test.ts`
+- `src/utils/urlUtils.ts` -> `tests/urlUtils.test.ts`
 
-* Fixing bugs
-* Adding features
-* Modifying logic
-* Refactoring complex code
+Test rules:
 
-### Test Types
+1. Test behavior, not implementation details.
+2. Keep tests deterministic and isolated.
+3. Use Node/Vitest-friendly tests (no browser-only globals in unit tests).
 
-* **Unit tests** for logic
-* **Integration tests** for boundaries
-* **End-to-end tests** only when already present
+## Build, Lint, and Quality Commands
 
-### Test Style
+Use npm scripts from `package.json`:
 
-* Test behavior, not implementation
-* Use descriptive test names
-* Keep tests deterministic and isolated
+- `npm run build` - typecheck + lint + build both browser targets.
+- `npm run build:firefox` / `npm run build:chrome` - target-specific builds.
+- `npm run build:prod*` - production builds with minification.
+- `npm run typecheck` - strict TypeScript checks (`noEmit`).
+- `npm run lint` / `npm run lint:fix` - ESLint for `src/**/*.ts`.
+- `npm run format` / `npm run format:check` - Prettier write/check.
+- `npm run test` / `npm run test:coverage` - Vitest test suites.
+- `npm run knip` - unused exports/dependency checks.
 
----
+## Git Hooks (Husky)
 
-## Pre-Commit Quality Checklist
+- `npm install` triggers `prepare` and installs Husky hooks.
+- Pre-commit hook (`.husky/pre-commit`) runs:
+  - `npm run lint`
+  - `npm run format:check`
+- Do not bypass hooks unless explicitly requested.
+- Do not modify `.husky/_` generated shim files unless there is a hook tooling issue.
 
-Before considering work complete, ensure:
+## Dependencies and Configuration
 
-1. Code builds (if applicable)
-2. Tests pass or were added appropriately
-3. No debug artifacts remain
-4. Imports are organized
-5. Errors are handled
-6. No sensitive data is introduced
-7. Formatting matches existing code
+1. Prefer existing dependencies and utilities before adding new packages.
+2. Avoid overlapping libraries that solve the same problem.
+3. Do not hard-code environment-specific values.
+4. Preserve current build and CI compatibility unless asked to change it.
 
----
+## When Unsure
 
-## Dependency Management
+1. Inspect similar files and follow the dominant local pattern.
+2. Choose the least invasive option.
+3. Keep behavior unchanged by default.
+4. Make assumptions explicit in the final summary when they affect outcomes.
 
-* Do not add dependencies unless necessary
-* Prefer existing libraries already in use
-* Avoid duplicate or overlapping dependencies
-* Document why a new dependency is required
+## Completion Checklist
 
----
+Before finishing, verify:
 
-## Configuration & Environment
-
-* Never hard-code environment-specific values
-* Use existing configuration patterns
-* Respect `.env`, config files, or environment variables already present
-* Do not assume production or development context
-
----
-
-## Build & Deployment
-
-* Do not modify build pipelines unless asked
-* Preserve CI/CD compatibility
-* Avoid introducing environment-specific assumptions
-
----
-
-## Common Pitfalls to Avoid
-
-1. Introducing new patterns when existing ones exist
-2. Refactoring beyond the requested scope
-3. Removing code that appears unused without confirmation
-4. Making stylistic changes unrelated to the task
-5. Guessing requirements instead of inferring from code
-
----
-
-## How to Proceed When Unsure
-
-If ambiguity exists:
-
-1. Inspect similar files
-2. Follow the most common existing pattern
-3. Choose the least invasive option
-4. Leave behavior unchanged
-5. Prefer explicitness over assumption
-
----
-
-## Agent Operating Principles
-
-* Be conservative
-* Be consistent
-* Be reversible
-* Be explicit
-* Be testable
-
-**The goal is to integrate seamlessly into the existing codebase as if written by its original authors.**
+1. Relevant code compiles (`npm run typecheck` or `npm run build`).
+2. Lint and formatting pass (`npm run lint`, `npm run format:check`).
+3. Related tests pass (`npm run test` and targeted coverage when useful).
+4. Documentation is updated when behavior or developer workflow changed.

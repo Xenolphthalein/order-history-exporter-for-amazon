@@ -23,6 +23,9 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
   - [Data Exported](#data-exported)
     - [JSON Format](#json-format)
     - [CSV Format](#csv-format)
+  - [Development](#development)
+    - [Useful Commands](#useful-commands)
+    - [Git Commit Hooks](#git-commit-hooks)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -64,6 +67,8 @@ npm run build
 npm run build:firefox
 npm run build:chrome
 ```
+
+`npm install` also runs the repository's `prepare` script, which installs Husky git hooks.
 
 The built extensions will be in browser-specific directories:
 - **Firefox**: `dist/firefox/` — Load via `about:debugging` → "This Firefox" → "Load Temporary Add-on"
@@ -138,11 +143,9 @@ The CSV export creates multiple rows for orders with multiple items. Columns:
 
 ---
 
-## Contributing
+## Development
 
-Contributions are welcome. Please submit PRs to the `main` branch.
-
-**Development Commands**
+### Useful Commands
 
 ```bash
 npm run build              # Build for all browsers (development)
@@ -151,9 +154,36 @@ npm run build:chrome       # Build Chrome extension only
 npm run build:prod         # Production build for all browsers
 npm run build:prod:firefox # Production build for Firefox
 npm run build:prod:chrome  # Production build for Chrome
+npm run typecheck          # TypeScript checks (no emit)
 npm run lint               # ESLint
+npm run lint:fix           # ESLint with auto-fixes
+npm run format             # Format repository with Prettier
+npm run format:check       # Check formatting
 npm run test               # Run tests
+npm run test:coverage      # Run tests with coverage report
+npm run knip               # Find unused files/exports/dependencies
 ```
+
+### Git Commit Hooks
+
+This repository uses Husky git hooks. The pre-commit hook runs:
+
+```bash
+npm run lint
+npm run format:check
+```
+
+If hooks are missing locally, run:
+
+```bash
+npm run prepare
+```
+
+---
+
+## Contributing
+
+Contributions are welcome. Please submit PRs to the `main` branch.
 
 ---
 
