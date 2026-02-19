@@ -32,23 +32,42 @@ const englishMonths: Record<string, number> = {
   december: 12,
 };
 
-const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths };
+const frenchMonths: Record<string, number> = {
+  janvier: 1,
+  février: 2,
+  fevrier: 2,
+  mars: 3,
+  avril: 4,
+  mai: 5,
+  juin: 6,
+  juillet: 7,
+  août: 8,
+  aout: 8,
+  septembre: 9,
+  octobre: 10,
+  novembre: 11,
+  décembre: 12,
+  decembre: 12,
+};
+
+const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths, ...frenchMonths };
 
 /**
  * Parse date string to ISO format (YYYY-MM-DD)
- * Supports German format "15. Januar 2024" and English format "January 15, 2024"
+ * Supports German format "15. Januar 2024", English format "January 15, 2024",
+ * and French format "15 janvier 2024".
  */
 export function parseDate(dateText: string): string | null {
   if (!dateText) return null;
 
   const cleanText = dateText.trim().toLowerCase();
 
-  // German: "15. Januar 2024"
-  const germanMatch = cleanText.match(/(\d{1,2})\.?\s*([a-zäöü]+)\s*(\d{4})/i);
-  if (germanMatch) {
-    const day = parseInt(germanMatch[1] || '0', 10);
-    const monthName = (germanMatch[2] || '').toLowerCase();
-    const year = parseInt(germanMatch[3] || '0', 10);
+  // Day-Month-Year: "15. Januar 2024", "15 janvier 2024", "1er février 2024"
+  const dayMonthYearMatch = cleanText.match(/(\d{1,2})(?:er)?\.?\s*([\p{L}]+)\s*(\d{4})/iu);
+  if (dayMonthYearMatch) {
+    const day = parseInt(dayMonthYearMatch[1] || '0', 10);
+    const monthName = (dayMonthYearMatch[2] || '').toLowerCase();
+    const year = parseInt(dayMonthYearMatch[3] || '0', 10);
 
     if (year >= 2000 && year <= 2100 && allMonths[monthName]) {
       const month = allMonths[monthName];
