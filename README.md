@@ -26,6 +26,7 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
   - [Development](#development)
     - [Useful Commands](#useful-commands)
     - [Git Commit Hooks](#git-commit-hooks)
+  - [Release Automation](#release-automation)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -178,6 +179,32 @@ If hooks are missing locally, run:
 ```bash
 npm run prepare
 ```
+
+---
+
+## Release Automation
+
+Tagged releases (`v*.*.*`) run `.github/workflows/release.yml` and now:
+
+- builds Firefox and Chrome artifacts
+- creates a GitHub Release with downloadable files
+- publishes to Chrome Web Store (stable tags only)
+- submits to Firefox Add-ons (listed channel, stable tags only)
+
+Configure these repository settings before tagging a release:
+
+Repository Variables:
+- `CHROME_EXTENSION_ID` (example: `fipfbjgikgcggcebnefmamgemoehfgof`)
+- `CHROME_PUBLISHER_ID` (Chrome Web Store publisher account ID)
+
+Repository Secrets:
+- `CHROME_CLIENT_ID`
+- `CHROME_CLIENT_SECRET`
+- `CHROME_REFRESH_TOKEN`
+- `FIREFOX_API_KEY`
+- `FIREFOX_API_SECRET`
+
+Prerelease tags (for example `v1.2.3-beta.1`) still create a GitHub Release, but skip Chrome/Firefox store publishing.
 
 ---
 
