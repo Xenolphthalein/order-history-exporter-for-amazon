@@ -218,8 +218,20 @@ jobs:
 
           latest_upload_response="$upload_response"
           upload_state=$(echo "$upload_response" | jq -r '.uploadState // empty')
+          is_upload_in_progress() {
+            case "$1" in
+              UPLOAD_STATE_IN_PROGRESS|IN_PROGRESS) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+          is_upload_success() {
+            case "$1" in
+              UPLOAD_STATE_SUCCESS|SUCCEEDED) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
 
-          if [ "$upload_state" = "UPLOAD_STATE_IN_PROGRESS" ]; then
+          if is_upload_in_progress "$upload_state"; then
             for _ in {1..20}; do
               sleep 5
               status_response=$(curl -sS -X GET "https://chromewebstore.googleapis.com/v2/${resource_name}/fetchStatus" \
@@ -228,11 +240,11 @@ jobs:
 
               latest_upload_response="$status_response"
               upload_state=$(echo "$status_response" | jq -r '.uploadState // empty')
-              [ "$upload_state" != "UPLOAD_STATE_IN_PROGRESS" ] && break
+              ! is_upload_in_progress "$upload_state" && break
             done
           fi
 
-          if [ "$upload_state" != "UPLOAD_STATE_SUCCESS" ]; then
+          if ! is_upload_success "$upload_state"; then
             echo "Chrome upload failed with state: ${upload_state:-unknown}"
             echo "$latest_upload_response"
             exit 1
