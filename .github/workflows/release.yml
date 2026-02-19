@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     name: Test
@@ -27,6 +31,9 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Run type check
         run: npm run typecheck
@@ -56,11 +63,39 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Package Firefox extension (.xpi)
+        run: |
+          cd dist/firefox
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.xpi ./*
+
+      - name: Package Firefox extension (.zip)
+        run: |
+          cd dist/firefox
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.zip ./*
+
+      - name: Package Chrome extension (.zip)
+        run: |
+          cd dist/chrome
+          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip ./*
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: extension-dist
           path: dist/
+          retention-days: 1
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            order-history-exporter-for-amazon-*.xpi
+            order-history-exporter-for-amazon-*.zip
           retention-days: 1
 
   release:
@@ -73,11 +108,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download build artifacts
+      - name: Download release packages
         uses: actions/download-artifact@v4
         with:
-          name: extension-dist
-          path: dist/
+          name: release-packages
 
       - name: Get version from tag
         id: version
@@ -98,24 +132,6 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Package Firefox extension (.xpi)
-        run: |
-          cd dist/firefox
-          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.xpi ./*
-          cd ../..
-
-      - name: Package Firefox extension (.zip)
-        run: |
-          cd dist/firefox
-          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-firefox.zip ./*
-          cd ../..
-
-      - name: Package Chrome extension (.zip)
-        run: |
-          cd dist/chrome
-          zip -r ../../order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip ./*
-          cd ../..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -139,3 +155,237 @@ jobs:
             order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish_chrome:
+    name: Publish Chrome Web Store
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Publish to Chrome Web Store
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_ZIP_PATH: order-history-exporter-for-amazon-${{ steps.version.outputs.VERSION }}-chrome.zip
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for required in CHROME_EXTENSION_ID CHROME_PUBLISHER_ID CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN; do
+            if [ -z "${!required:-}" ]; then
+              echo "Missing required workflow variable/secret: $required"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          resource_name="publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}"
+
+          token_response=$(curl -sS -X POST "https://oauth2.googleapis.com/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "client_id=${CHROME_CLIENT_ID}" \
+            --data-urlencode "client_secret=${CHROME_CLIENT_SECRET}" \
+            --data-urlencode "refresh_token=${CHROME_REFRESH_TOKEN}" \
+            --data-urlencode "grant_type=refresh_token")
+
+          access_token=$(echo "$token_response" | jq -r '.access_token')
+          if [ -z "$access_token" ] || [ "$access_token" = "null" ]; then
+            echo "Could not obtain Chrome Web Store access token"
+            echo "$token_response"
+            exit 1
+          fi
+
+          echo "Uploading ${CHROME_ZIP_PATH} to Chrome Web Store..."
+          upload_response=$(curl -sS -X POST "https://chromewebstore.googleapis.com/upload/v2/${resource_name}:upload" \
+            -H "Authorization: Bearer ${access_token}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@${CHROME_ZIP_PATH}")
+
+          latest_upload_response="$upload_response"
+          upload_state=$(echo "$upload_response" | jq -r '.uploadState // empty')
+
+          if [ "$upload_state" = "UPLOAD_STATE_IN_PROGRESS" ]; then
+            for _ in {1..20}; do
+              sleep 5
+              status_response=$(curl -sS -X GET "https://chromewebstore.googleapis.com/v2/${resource_name}/fetchStatus" \
+                -H "Authorization: Bearer ${access_token}" \
+                -H "x-goog-api-version: 2")
+
+              latest_upload_response="$status_response"
+              upload_state=$(echo "$status_response" | jq -r '.uploadState // empty')
+              [ "$upload_state" != "UPLOAD_STATE_IN_PROGRESS" ] && break
+            done
+          fi
+
+          if [ "$upload_state" != "UPLOAD_STATE_SUCCESS" ]; then
+            echo "Chrome upload failed with state: ${upload_state:-unknown}"
+            echo "$latest_upload_response"
+            exit 1
+          fi
+
+          echo "Publishing Chrome Web Store item..."
+          publish_response=$(curl -sS -X POST "https://chromewebstore.googleapis.com/v2/${resource_name}:publish" \
+            -H "Authorization: Bearer ${access_token}" \
+            -H "x-goog-api-version: 2")
+
+          publish_status=$(echo "$publish_response" | jq -r '.status[]?')
+          if [ -z "$publish_status" ]; then
+            echo "Unexpected publish response from Chrome Web Store API"
+            echo "$publish_response"
+            exit 1
+          fi
+
+          if echo "$publish_status" | grep -Eq '^(OK|ITEM_PENDING_REVIEW)$'; then
+            echo "Chrome Web Store publish status: $publish_status"
+          else
+            echo "Chrome Web Store publish returned non-success status"
+            echo "$publish_response"
+            exit 1
+          fi
+
+  publish_firefox:
+    name: Publish Firefox Add-ons
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Submit to Firefox Add-ons
+        env:
+          FIREFOX_ADDON_ID: ${{ secrets.FIREFOX_ADDON_ID }}
+          FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
+          FIREFOX_API_SECRET: ${{ secrets.FIREFOX_API_SECRET }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for required in FIREFOX_ADDON_ID FIREFOX_API_KEY FIREFOX_API_SECRET; do
+            if [ -z "${!required:-}" ]; then
+              echo "Missing required secret: $required"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+          AMO_BASE="https://addons.mozilla.org/api/v5"
+
+          # Generate an AMO JWT from API key/secret (valid 5 min)
+          generate_jwt() {
+            node -e "
+              const crypto = require('crypto');
+              const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+              const now = Math.floor(Date.now()/1000);
+              const payload = Buffer.from(JSON.stringify({
+                iss: process.env.FIREFOX_API_KEY,
+                jti: crypto.randomUUID(),
+                iat: now,
+                exp: now + 300
+              })).toString('base64url');
+              const sig = crypto.createHmac('sha256', process.env.FIREFOX_API_SECRET)
+                .update(header+'.'+payload).digest('base64url');
+              console.log(header+'.'+payload+'.'+sig);
+            "
+          }
+
+          # Package extension for upload
+          cd dist/firefox
+          zip -r ../../extension.zip ./*
+          cd ../..
+
+          # Package source code for AMO review
+          git archive --format=zip HEAD -o source-code.zip
+
+          # Step 1: Upload extension zip for validation
+          echo "Uploading extension to AMO..."
+          upload_response=$(curl -sS -X POST "${AMO_BASE}/addons/upload/" \
+            -H "Authorization: JWT $(generate_jwt)" \
+            -F "upload=@extension.zip" \
+            -F "channel=listed")
+
+          upload_uuid=$(echo "$upload_response" | jq -r '.uuid // empty')
+          if [ -z "$upload_uuid" ]; then
+            echo "Failed to upload to AMO"
+            echo "$upload_response"
+            exit 1
+          fi
+          echo "Upload UUID: ${upload_uuid}"
+
+          # Step 2: Poll for validation to complete
+          echo "Waiting for AMO validation..."
+          validated="false"
+          for i in {1..30}; do
+            sleep 10
+
+            validation_response=$(curl -sS -X GET "${AMO_BASE}/addons/upload/${upload_uuid}/" \
+              -H "Authorization: JWT $(generate_jwt)")
+
+            validated=$(echo "$validation_response" | jq -r '.validated // "false"')
+            valid=$(echo "$validation_response" | jq -r '.valid // "false"')
+
+            if [ "$validated" = "true" ]; then
+              if [ "$valid" = "true" ]; then
+                echo "Validation passed"
+                break
+              else
+                echo "AMO validation failed"
+                echo "$validation_response" | jq '.validation'
+                exit 1
+              fi
+            fi
+            echo "  Validation in progress (attempt ${i}/30)..."
+          done
+
+          if [ "$validated" != "true" ]; then
+            echo "AMO validation did not complete within timeout"
+            exit 1
+          fi
+
+          # Step 3: Create version with the validated upload and source code
+          echo "Creating version ${VERSION} on AMO..."
+          version_response=$(curl -sS -X POST "${AMO_BASE}/addons/addon/${FIREFOX_ADDON_ID}/versions/" \
+            -H "Authorization: JWT $(generate_jwt)" \
+            -F "upload=${upload_uuid}" \
+            -F "source=@source-code.zip")
+
+          version_id=$(echo "$version_response" | jq -r '.id // empty')
+          if [ -z "$version_id" ] || [ "$version_id" = "null" ]; then
+            echo "Failed to create version on AMO"
+            echo "$version_response"
+            exit 1
+          fi
+
+          echo "Version ${VERSION} submitted to AMO (version ID: ${version_id})"
+          echo "The version is now pending review by AMO reviewers"
