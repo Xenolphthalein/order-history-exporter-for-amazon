@@ -155,6 +155,7 @@ npm run build:chrome       # Build Chrome extension only
 npm run build:prod         # Production build for all browsers
 npm run build:prod:firefox # Production build for Firefox
 npm run build:prod:chrome  # Production build for Chrome
+npm run bump -- bugfix     # Or major/minor; keeps package, lockfile, and manifests in sync
 npm run typecheck          # TypeScript checks (no emit)
 npm run lint               # ESLint
 npm run lint:fix           # ESLint with auto-fixes

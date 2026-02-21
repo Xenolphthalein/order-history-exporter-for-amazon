@@ -4,6 +4,7 @@
   "description": "Export your Amazon order history as JSON or CSV files",
   "type": "module",
   "scripts": {
+    "bump": "node scripts/bump.mjs",
     "build": "npm run typecheck && npm run lint && node build.js",
     "build:firefox": "npm run typecheck && npm run lint && node build.js --target=firefox",
     "build:chrome": "npm run typecheck && npm run lint && node build.js --target=chrome",
