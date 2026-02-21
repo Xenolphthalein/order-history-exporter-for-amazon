@@ -50,6 +50,10 @@ describe('parseDate', () => {
       expect(parseDate('March 1 2023')).toBe('2023-03-01');
     });
 
+    it('should parse "14 February 2026" (day-first)', () => {
+      expect(parseDate('14 February 2026')).toBe('2026-02-14');
+    });
+
     it('should handle case insensitivity', () => {
       expect(parseDate('FEBRUARY 28, 2024')).toBe('2024-02-28');
     });
@@ -159,6 +163,16 @@ describe('parseOrderDate', () => {
   it('should extract English date from labeled line', () => {
     const text = 'Order #123-4567890-1234567\nOrdered on January 15, 2024\nProduct';
     expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
+  it('should extract English day-first date on its own line', () => {
+    const text = 'Order #123-4567890-1234567\nOrder placed\n14 February 2026\nProduct';
+    expect(parseOrderDate(text)).toBe('2026-02-14');
+  });
+
+  it('should extract English day-first date from labeled line', () => {
+    const text = 'Order #123-4567890-1234567\nOrder placed 14 February 2026\nProduct';
+    expect(parseOrderDate(text)).toBe('2026-02-14');
   });
 
   it('should parse date from fallback chunk when no label exists', () => {
