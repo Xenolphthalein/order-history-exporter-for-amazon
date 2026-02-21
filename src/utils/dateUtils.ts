@@ -74,6 +74,11 @@ const orderDatePatterns: RegExp[] = [
     'iu'
   ),
   new RegExp(`\\b((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Order placed|Order placed on|Ordered on)\\s+(\\d{1,2}(?:st|nd|rd|th)?\\s*(?:${englishMonthNames})\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}(?:st|nd|rd|th)?\\s*(?:${englishMonthNames})\\s+\\d{4})\\b`, 'iu'),
 ];
 
 function getDateCandidates(orderText: string): string[] {
@@ -98,7 +103,7 @@ function getDateCandidates(orderText: string): string[] {
 /**
  * Parse date string to ISO format (YYYY-MM-DD)
  * Supports German format "15. Januar 2024", English format "January 15, 2024",
- * and French format "15 janvier 2024".
+ * "15 January 2024", and French format "15 janvier 2024".
  */
 export function parseDate(dateText: string): string | null {
   if (!dateText) return null;
@@ -106,7 +111,9 @@ export function parseDate(dateText: string): string | null {
   const cleanText = dateText.trim().toLowerCase();
 
   // Day-Month-Year: "15. Januar 2024", "15 janvier 2024", "1er février 2024"
-  const dayMonthYearMatch = cleanText.match(/(\d{1,2})(?:er)?\.?\s*([\p{L}]+)\s*(\d{4})/iu);
+  const dayMonthYearMatch = cleanText.match(
+    /(\d{1,2})(?:er|st|nd|rd|th)?\.?\s*([\p{L}]+)\s*(\d{4})/iu
+  );
   if (dayMonthYearMatch) {
     const day = parseInt(dayMonthYearMatch[1] || '0', 10);
     const monthName = (dayMonthYearMatch[2] || '').toLowerCase();
