@@ -1,6 +1,6 @@
 {
   "name": "order-history-exporter-for-amazon",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Export your Amazon order history as JSON or CSV files",
   "type": "module",
   "scripts": {
