@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseDate, filterYearsByDateRange } from '../src/utils/dateUtils';
+import {
+  parseDate,
+  parseOrderDate,
+  extractOrderYear,
+  filterYearsByDateRange,
+} from '../src/utils/dateUtils';
 
 describe('parseDate', () => {
   describe('German date format', () => {
@@ -137,5 +142,44 @@ describe('filterYearsByDateRange', () => {
   it('should handle edge year boundaries', () => {
     const result = filterYearsByDateRange(years, '2023-12-31', '2024-01-01');
     expect(result).toEqual(['2024', '2023']);
+  });
+});
+
+describe('parseOrderDate', () => {
+  it('should extract German date from labeled line', () => {
+    const text = 'Bestellnummer: 123-4567890-1234567\nBestellt am 15. Januar 2024\nArtikel';
+    expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
+  it('should extract French date from labeled line', () => {
+    const text = 'Commande n° 123-4567890-1234567\nCommandé le 1er février 2024\nArticle';
+    expect(parseOrderDate(text)).toBe('2024-02-01');
+  });
+
+  it('should extract English date from labeled line', () => {
+    const text = 'Order #123-4567890-1234567\nOrdered on January 15, 2024\nProduct';
+    expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
+  it('should parse date from fallback chunk when no label exists', () => {
+    expect(parseOrderDate('Some text  10. März 2024  More text')).toBe('2024-03-10');
+  });
+
+  it('should return empty string when no valid date exists', () => {
+    expect(parseOrderDate('Order #123-4567890-1234567 Product XYZ')).toBe('');
+  });
+});
+
+describe('extractOrderYear', () => {
+  it('should extract year from timeFilter text', () => {
+    expect(extractOrderYear('timeFilter=year-2024')).toBe('2024');
+  });
+
+  it('should extract year from plain text', () => {
+    expect(extractOrderYear('Orders from 2023')).toBe('2023');
+  });
+
+  it('should return null when no year pattern exists', () => {
+    expect(extractOrderYear('all orders')).toBeNull();
   });
 });

@@ -6,7 +6,8 @@
 import browser from 'webextension-polyfill';
 import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
 import {
-  parseDate,
+  parseOrderDate,
+  extractOrderYear,
   filterYearsByDateRange,
   buildOrderPageUrl,
   getOrderHistoryBaseUrl,
@@ -17,6 +18,7 @@ import {
   extractOrderIdFromUrl,
   extractPriceFromText,
   parsePrice,
+  parseOrderStatus,
 } from '../utils';
 
 (function (): void {
@@ -312,9 +314,9 @@ import {
         const options = dropdown.querySelectorAll('option');
         options.forEach((option) => {
           const value = option.value || option.textContent || '';
-          const yearMatch = value.match(/\b(20\d{2})\b/);
-          if (yearMatch?.[1]) {
-            years.push(yearMatch[1]);
+          const year = extractOrderYear(value);
+          if (year) {
+            years.push(year);
           }
         });
         if (years.length > 0) break;
@@ -325,9 +327,9 @@ import {
     const yearLinks = document.querySelectorAll('a[href*="timeFilter=year-"]');
     yearLinks.forEach((link) => {
       const href = (link as HTMLAnchorElement).href;
-      const yearMatch = href.match(/year-?(20\d{2})/);
-      if (yearMatch?.[1] && !years.includes(yearMatch[1])) {
-        years.push(yearMatch[1]);
+      const year = extractOrderYear(href);
+      if (year && !years.includes(year)) {
+        years.push(year);
       }
     });
 
@@ -341,9 +343,9 @@ import {
         (item as HTMLOptionElement).value ||
         item.textContent ||
         '';
-      const yearMatch = value.match(/year-?(20\d{2})/i) || value.match(/\b(20\d{2})\b/);
-      if (yearMatch?.[1] && !years.includes(yearMatch[1])) {
-        years.push(yearMatch[1]);
+      const year = extractOrderYear(value);
+      if (year && !years.includes(year)) {
+        years.push(year);
       }
     });
 
@@ -521,25 +523,7 @@ import {
     }
 
     // Extract order dates from supported locales
-    const datePatterns = [
-      /(?:Bestellt am|Bestellung aufgegeben am)\s+(\d{1,2}\.?\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4})/i,
-      /(\d{1,2}\.?\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4})/i,
-      /(?:Commandé le|Commande passée le)\s+(\d{1,2}(?:er)?\s*(?:janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+\d{4})/iu,
-      /(\d{1,2}(?:er)?\s*(?:janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+\d{4})/iu,
-      /(?:Order placed|Ordered on)\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i,
-      /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4})/i,
-    ];
-
-    for (const pattern of datePatterns) {
-      const match = orderText.match(pattern);
-      if (match?.[1]) {
-        const parsedDate = parseDate(match[1]);
-        if (parsedDate && parsedDate.startsWith('20')) {
-          order.orderDate = parsedDate;
-          break;
-        }
-      }
-    }
+    order.orderDate = parseOrderDate(orderText);
 
     // Extract Total Amount
     const priceResult = extractPriceFromText(orderText);
@@ -549,19 +533,7 @@ import {
     }
 
     // Extract Order Status
-    const statusPatterns = [
-      /(?:Zugestellt|Geliefert)\s*(?:am)?\s*[\d.\s\w]*/i,
-      /(?:Delivered|Arriving|Shipped)\s*[\w\s,\d]*/i,
-      /(?:Storniert|Cancelled|Returned|Refunded)/i,
-    ];
-
-    for (const pattern of statusPatterns) {
-      const match = orderText.match(pattern);
-      if (match?.[0]) {
-        order.orderStatus = match[0].trim().substring(0, 50);
-        break;
-      }
-    }
+    order.orderStatus = parseOrderStatus(orderText);
 
     // Extract Items
     order.items = parseOrderItems(orderEl);
