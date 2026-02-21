@@ -63,6 +63,30 @@ describe('isAmazonOrderHistoryPage', () => {
     it('should return true for amazon.com.be order history', () => {
       expect(isAmazonOrderHistoryPage('https://www.amazon.com.be/your-orders/orders')).toBe(true);
     });
+
+    it('should return true for amazon.de css order history', () => {
+      expect(
+        isAmazonOrderHistoryPage(
+          'https://www.amazon.de/gp/css/order-history?ref_=nav_AccountFlyout_orders'
+        )
+      ).toBe(true);
+    });
+
+    it('should return true for amazon.de your-account order history', () => {
+      expect(
+        isAmazonOrderHistoryPage(
+          'https://www.amazon.de/gp/your-account/order-history?ref_=ya_d_c_yo'
+        )
+      ).toBe(true);
+    });
+
+    it('should return true for locale-prefixed order history URLs', () => {
+      expect(
+        isAmazonOrderHistoryPage(
+          'https://www.amazon.com/-/de/gp/css/order-history?ref_=nav_AccountFlyout_orders'
+        )
+      ).toBe(true);
+    });
   });
 
   describe('invalid pages', () => {
@@ -72,6 +96,10 @@ describe('isAmazonOrderHistoryPage', () => {
 
     it('should return false for Amazon product page', () => {
       expect(isAmazonOrderHistoryPage('https://www.amazon.com/dp/B0123456789')).toBe(false);
+    });
+
+    it('should return false for non-order history account pages', () => {
+      expect(isAmazonOrderHistoryPage('https://www.amazon.de/gp/css/homepage.html')).toBe(false);
     });
 
     it('should return false for non-Amazon site', () => {
@@ -102,6 +130,22 @@ describe('getOrderHistoryBaseUrl', () => {
     expect(getOrderHistoryBaseUrl('https://www.amazon.co.uk/some-path')).toBe(
       'https://www.amazon.co.uk/your-orders/orders'
     );
+  });
+
+  it('should preserve gp/css/order-history base path', () => {
+    expect(
+      getOrderHistoryBaseUrl(
+        'https://www.amazon.de/gp/css/order-history?ref_=nav_AccountFlyout_orders'
+      )
+    ).toBe('https://www.amazon.de/gp/css/order-history');
+  });
+
+  it('should preserve locale-prefixed base path', () => {
+    expect(
+      getOrderHistoryBaseUrl(
+        'https://www.amazon.com/-/de/gp/css/order-history?ref_=nav_AccountFlyout_orders'
+      )
+    ).toBe('https://www.amazon.com/-/de/gp/css/order-history');
   });
 
   it('should return empty string for invalid URL', () => {
@@ -149,5 +193,7 @@ describe('constants', () => {
   it('should have order paths', () => {
     expect(ORDER_PATHS).toContain('/your-orders');
     expect(ORDER_PATHS).toContain('/gp/your-account/order-history');
+    expect(ORDER_PATHS).toContain('/gp/css/order-history');
+    expect(ORDER_PATHS).toContain('/your-orders/orders');
   });
 });
