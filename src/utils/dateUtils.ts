@@ -51,6 +51,49 @@ const frenchMonths: Record<string, number> = {
 };
 
 const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths, ...frenchMonths };
+const germanMonthNames =
+  'Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember';
+const frenchMonthNames =
+  'janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre';
+const englishMonthNames =
+  'January|February|March|April|May|June|July|August|September|October|November|December';
+
+const orderDatePatterns: RegExp[] = [
+  new RegExp(
+    `(?:Bestellt am|Bestellung aufgegeben am)\\s+(\\d{1,2}\\.?\\s*(?:${germanMonthNames})\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}\\.?\\s*(?:${germanMonthNames})\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Commandé le|Commande passée le)\\s+(\\d{1,2}(?:er)?\\s*(?:${frenchMonthNames})\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}(?:er)?\\s*(?:${frenchMonthNames})\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Order placed|Ordered on)\\s+((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`, 'iu'),
+];
+
+function getDateCandidates(orderText: string): string[] {
+  const normalized = orderText.replace(/\u00a0/g, ' ').trim();
+  if (!normalized) return [];
+
+  const byLine = normalized
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  if (byLine.length > 1) return byLine;
+
+  const byChunk = normalized
+    .split(/\s{2,}|\s[|]\s|\s[-–—]\s/)
+    .map((chunk) => chunk.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  return byChunk.length > 0 ? byChunk : [normalized.replace(/\s+/g, ' ').trim()];
+}
 
 /**
  * Parse date string to ISO format (YYYY-MM-DD)
@@ -89,6 +132,39 @@ export function parseDate(dateText: string): string | null {
   }
 
   return null;
+}
+
+/**
+ * Extract and parse order date from order card text.
+ * Returns ISO date string (YYYY-MM-DD) or empty string when no valid date is found.
+ */
+export function parseOrderDate(orderText: string): string {
+  if (!orderText) return '';
+
+  const candidates = getDateCandidates(orderText);
+
+  for (const candidate of candidates) {
+    for (const pattern of orderDatePatterns) {
+      const match = candidate.match(pattern);
+      if (match?.[1]) {
+        const parsedDate = parseDate(match[1]);
+        if (parsedDate && parsedDate.startsWith('20')) {
+          return parsedDate;
+        }
+      }
+    }
+  }
+
+  return '';
+}
+
+/**
+ * Extract a four-digit order-history year from text values used in Amazon filter UI.
+ */
+export function extractOrderYear(value: string): string | null {
+  if (!value) return null;
+  const yearMatch = value.match(/year-?(20\d{2})/i) || value.match(/\b(20\d{2})\b/);
+  return yearMatch?.[1] || null;
 }
 
 /**
