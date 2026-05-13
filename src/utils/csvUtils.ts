@@ -26,15 +26,23 @@ export function formatPromotionsForCSV(
   return promotions.map((p) => `${p.description}: €${p.amount}`).join('; ');
 }
 
+export interface CsvOptions {
+  includePaymentMethod?: boolean;
+}
+
 /**
  * Convert orders to CSV format
  * @param orders - Array of orders to convert
  * @param getHeader - Function to get localized header name
+ * @param options - Optional flags controlling which columns appear
  */
 export function convertOrdersToCSV(
   orders: Order[],
-  getHeader: (key: string) => string = (key) => key
+  getHeader: (key: string) => string = (key) => key,
+  options: CsvOptions = {}
 ): string {
+  const { includePaymentMethod = false } = options;
+
   const headers = [
     getHeader('csvHeaderOrderId'),
     getHeader('csvHeaderOrderDate'),
@@ -52,10 +60,20 @@ export function convertOrdersToCSV(
     getHeader('csvHeaderDetailsUrl'),
   ];
 
+  if (includePaymentMethod) {
+    headers.push(getHeader('csvHeaderCardBrand'), getHeader('csvHeaderCardLast4'));
+  }
+
   const rows: string[] = [headers.join(',')];
 
   orders.forEach((order) => {
     const promotionsStr = formatPromotionsForCSV(order.promotions);
+    const paymentCols = includePaymentMethod
+      ? [
+          escapeCSVValue(order.paymentMethod?.brand ?? ''),
+          escapeCSVValue(order.paymentMethod?.last4 ?? ''),
+        ]
+      : [];
 
     if (order.items.length === 0) {
       rows.push(
@@ -74,6 +92,7 @@ export function convertOrdersToCSV(
           escapeCSVValue(promotionsStr),
           '',
           escapeCSVValue(order.detailsUrl),
+          ...paymentCols,
         ].join(',')
       );
     } else {
@@ -94,6 +113,7 @@ export function convertOrdersToCSV(
             index === 0 ? escapeCSVValue(promotionsStr) : '',
             escapeCSVValue(item.itemUrl),
             escapeCSVValue(order.detailsUrl),
+            ...(index === 0 ? paymentCols : paymentCols.map(() => '')),
           ].join(',')
         );
       });

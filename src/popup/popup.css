@@ -70,6 +70,40 @@ header h1 {
   accent-color: #ff9900;
 }
 
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+  border-color: #ff9900;
+  background: #fff8e5;
+}
+
+.checkbox-label input[type='checkbox'] {
+  accent-color: #ff9900;
+}
+
+.hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #777;
+  padding: 0 4px;
+}
+
 .date-inputs {
   margin-top: 12px;
   padding: 12px;

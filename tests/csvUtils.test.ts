@@ -176,4 +176,69 @@ describe('convertOrdersToCSV', () => {
     const csv = convertOrdersToCSV(orders);
     expect(csv).toContain('"Product ""with quotes"", and commas"');
   });
+
+  describe('payment method columns (opt-in)', () => {
+    it('does not add card columns by default', () => {
+      const orders = [createOrder({ paymentMethod: { brand: 'Visa', last4: '4242', raw: '' } })];
+      const csv = convertOrdersToCSV(orders);
+      expect(csv).not.toContain('csvHeaderCardBrand');
+      expect(csv).not.toContain('csvHeaderCardLast4');
+      expect(csv).not.toContain('Visa');
+      expect(csv).not.toContain('4242');
+    });
+
+    it('adds card columns when includePaymentMethod is true', () => {
+      const orders = [createOrder({ paymentMethod: { brand: 'Visa', last4: '4242', raw: '' } })];
+      const csv = convertOrdersToCSV(orders, undefined, { includePaymentMethod: true });
+      const lines = csv.split('\n');
+      expect(lines[0]).toContain('csvHeaderCardBrand');
+      expect(lines[0]).toContain('csvHeaderCardLast4');
+      expect(lines[1]).toContain('Visa');
+      expect(lines[1]).toContain('4242');
+    });
+
+    it('emits empty card columns when an order has no payment method captured', () => {
+      const orders = [createOrder()]; // no paymentMethod
+      const csv = convertOrdersToCSV(orders, undefined, { includePaymentMethod: true });
+      const lines = csv.split('\n');
+      const cols = lines[1]!.split(',');
+      // Last two columns are brand + last4 — both empty.
+      expect(cols[cols.length - 2]).toBe('');
+      expect(cols[cols.length - 1]).toBe('');
+    });
+
+    it('only emits payment info on the first item row of a multi-item order', () => {
+      const orders = [
+        createOrder({
+          paymentMethod: { brand: 'Visa', last4: '4242', raw: '' },
+          items: [
+            {
+              title: 'A',
+              asin: 'B000000001',
+              quantity: 1,
+              price: 1,
+              discount: 0,
+              itemUrl: 'https://amazon.de/dp/B000000001',
+            },
+            {
+              title: 'B',
+              asin: 'B000000002',
+              quantity: 1,
+              price: 1,
+              discount: 0,
+              itemUrl: 'https://amazon.de/dp/B000000002',
+            },
+          ],
+        }),
+      ];
+      const csv = convertOrdersToCSV(orders, undefined, { includePaymentMethod: true });
+      const lines = csv.split('\n');
+      const firstItemCols = lines[1]!.split(',');
+      const secondItemCols = lines[2]!.split(',');
+      expect(firstItemCols[firstItemCols.length - 2]).toBe('Visa');
+      expect(firstItemCols[firstItemCols.length - 1]).toBe('4242');
+      expect(secondItemCols[secondItemCols.length - 2]).toBe('');
+      expect(secondItemCols[secondItemCols.length - 1]).toBe('');
+    });
+  });
 });
