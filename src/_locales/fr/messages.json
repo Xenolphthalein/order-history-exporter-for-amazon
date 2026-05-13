@@ -218,5 +218,25 @@
   "csvHeaderDetailsUrl": {
     "message": "URL des détails",
     "description": "CSV header for details URL"
+  },
+  "extraData": {
+    "message": "Données supplémentaires",
+    "description": "Section title for optional extra data toggles"
+  },
+  "includePaymentMethod": {
+    "message": "Inclure le moyen de paiement",
+    "description": "Checkbox to opt in to capturing card brand + last 4 digits"
+  },
+  "paymentMethodHint": {
+    "message": "Ne capture que la marque de la carte et les 4 derniers chiffres. Amazon n'expose jamais le numéro complet.",
+    "description": "Hint clarifying what payment data is captured"
+  },
+  "csvHeaderCardBrand": {
+    "message": "Marque de carte",
+    "description": "CSV header for card brand"
+  },
+  "csvHeaderCardLast4": {
+    "message": "4 derniers chiffres",
+    "description": "CSV header for card last 4 digits"
   }
 }

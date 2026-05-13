@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const startDateInput = document.getElementById('startDate') as HTMLInputElement;
   const endDateInput = document.getElementById('endDate') as HTMLInputElement;
   const settingsSection = document.getElementById('settings-section') as HTMLElement;
+  const includePaymentMethodInput = document.getElementById(
+    'includePaymentMethod'
+  ) as HTMLInputElement;
 
   // Set default date values
   const today = new Date();
@@ -124,6 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         startDate: startDate,
         endDate: endDate,
         exportAll: exportRange === 'all',
+        includePaymentMethod: includePaymentMethodInput?.checked === true,
       };
 
       // Send message to content script

@@ -11,6 +11,15 @@ export interface OrderItem {
   itemUrl: string;
 }
 
+// Amazon never exposes full card numbers (PCI-DSS). The most we can capture
+// is whatever the order details page renders to the logged-in user — typically
+// a card brand and the last 4 digits, e.g. "Visa ending in 1234".
+export interface PaymentMethod {
+  brand: string;
+  last4: string;
+  raw: string;
+}
+
 export interface Order {
   orderId: string;
   orderDate: string;
@@ -21,6 +30,7 @@ export interface Order {
   detailsUrl: string;
   promotions: Promotion[];
   totalSavings: number;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface Promotion {
@@ -33,6 +43,7 @@ export interface ExportOptions {
   startDate: string | null;
   endDate: string | null;
   exportAll: boolean;
+  includePaymentMethod: boolean;
 }
 
 export interface ExportState {
@@ -41,6 +52,7 @@ export interface ExportState {
   startDate: string | null;
   endDate: string | null;
   exportAll: boolean;
+  includePaymentMethod: boolean;
   yearsToProcess: string[];
   currentYearIndex: number;
   currentStartIndex: number;

@@ -19,6 +19,7 @@ import {
   extractPriceFromText,
   parsePrice,
   parseOrderStatus,
+  parsePaymentMethodFromHtml,
 } from '../utils';
 
 (function (): void {
@@ -105,7 +106,7 @@ import {
    * Start a new export
    */
   function startExport(options: ExportOptions): void {
-    const { format, startDate, endDate, exportAll } = options;
+    const { format, startDate, endDate, exportAll, includePaymentMethod } = options;
 
     // Get available years
     const years = getAvailableYears();
@@ -130,6 +131,7 @@ import {
       startDate: startDate,
       endDate: endDate,
       exportAll: exportAll,
+      includePaymentMethod: includePaymentMethod,
       yearsToProcess: yearsToProcess,
       currentYearIndex: 0,
       currentStartIndex: 0,
@@ -244,7 +246,7 @@ import {
     updateProgress(80, getMessage('fetchingPrices', [String(state.collectedOrders.length)]));
 
     // Fetch item prices for multi-item orders
-    await fetchOrderDetailsForPrices(state.collectedOrders);
+    await fetchOrderDetailsForPrices(state.collectedOrders, state.includePaymentMethod);
 
     updateProgress(95, getMessage('generatingFile'));
 
@@ -259,7 +261,7 @@ import {
       fileName = `amazon-orders-${timestamp}.json`;
       mimeType = 'application/json';
     } else {
-      fileContent = convertToCSV(state.collectedOrders);
+      fileContent = convertToCSV(state.collectedOrders, state.includePaymentMethod);
       fileName = `amazon-orders-${timestamp}.csv`;
       mimeType = 'text/csv';
     }
@@ -657,7 +659,10 @@ import {
   /**
    * Fetch order details for item prices and discounts
    */
-  async function fetchOrderDetailsForPrices(orders: Order[]): Promise<void> {
+  async function fetchOrderDetailsForPrices(
+    orders: Order[],
+    includePaymentMethod: boolean
+  ): Promise<void> {
     // We need to fetch details for all orders to get accurate pricing and discounts
     // Even single-item orders can have discounts
     const ordersNeedingDetails = orders.filter((order) => order.detailsUrl);
@@ -686,6 +691,13 @@ import {
 
         parseItemPricesFromDetails(order, doc);
         parsePromotionsFromDetails(order, doc);
+
+        if (includePaymentMethod) {
+          const paymentMethod = parsePaymentMethodFromHtml(doc);
+          if (paymentMethod) {
+            order.paymentMethod = paymentMethod;
+          }
+        }
 
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
@@ -904,8 +916,8 @@ import {
   /**
    * Convert orders to CSV format (wrapper using utility function)
    */
-  function convertToCSV(orders: Order[]): string {
-    return convertOrdersToCSV(orders, getMessage);
+  function convertToCSV(orders: Order[], includePaymentMethod: boolean): string {
+    return convertOrdersToCSV(orders, getMessage, { includePaymentMethod });
   }
 
   /**
