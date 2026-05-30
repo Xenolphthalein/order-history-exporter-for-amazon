@@ -138,5 +138,22 @@ describe('extractPriceFromText', () => {
     it('should not match zero amounts', () => {
       expect(extractPriceFromText('Total: €0,00')).toBeNull();
     });
+
+    it('should skip leading zero amounts and return the real total', () => {
+      const result = extractPriceFromText('$0.00 $0.00 $0.00 $252.71');
+      expect(result).toEqual({ amount: 252.71, currency: 'USD' });
+    });
+
+    it('should anchor on the labeled total when other amounts precede it', () => {
+      const result = extractPriceFromText(
+        'ORDER PLACED May 20, 2026 TOTAL $252.71 SHIP TO John Doe'
+      );
+      expect(result).toEqual({ amount: 252.71, currency: 'USD' });
+    });
+
+    it('should not treat a stray "$," token as a zero price', () => {
+      const result = extractPriceFromText('$, $252.71');
+      expect(result).toEqual({ amount: 252.71, currency: 'USD' });
+    });
   });
 });
