@@ -33,6 +33,7 @@ export function buildOrderPageUrl(baseUrl: string, year: string, startIndex: num
 export const AMAZON_DOMAINS = [
   'amazon.com',
   'amazon.co.uk',
+  'amazon.se',
   'amazon.de',
   'amazon.fr',
   'amazon.it',
