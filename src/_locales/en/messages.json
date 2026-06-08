@@ -113,6 +113,24 @@
       }
     }
   },
+  "includeTransactions": {
+    "message": "Include transaction details",
+    "description": "Checkbox label to include per-order transaction data"
+  },
+  "includeTransactionsHint": {
+    "message": "Fetches an extra page per order — slower",
+    "description": "Hint text below the include transactions checkbox"
+  },
+  "fetchingPricesAndTransactions": {
+    "message": "Fetching prices and transactions for $COUNT$ orders...",
+    "description": "Progress message when fetching both prices and transactions",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "25"
+      }
+    }
+  },
   "fetchingPrices": {
     "message": "Fetching item prices for $COUNT$ orders...",
     "description": "Progress message while fetching prices",
@@ -218,5 +236,13 @@
   "csvHeaderDetailsUrl": {
     "message": "Details URL",
     "description": "CSV header for details URL"
+  },
+  "csvHeaderTransactionDates": {
+    "message": "Transaction Dates",
+    "description": "CSV header for transaction dates"
+  },
+  "csvHeaderTransactionAmounts": {
+    "message": "Transaction Amounts",
+    "description": "CSV header for transaction amounts"
   }
 }

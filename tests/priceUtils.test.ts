@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrice, detectCurrency, extractPriceFromText } from '../src/utils/priceUtils';
+import {
+  parsePrice,
+  detectCurrency,
+  extractPriceFromText,
+  extractSignedPriceFromText,
+} from '../src/utils/priceUtils';
 
 describe('parsePrice', () => {
   describe('European format', () => {
@@ -138,5 +143,65 @@ describe('extractPriceFromText', () => {
     it('should not match zero amounts', () => {
       expect(extractPriceFromText('Total: €0,00')).toBeNull();
     });
+  });
+});
+
+describe('extractSignedPriceFromText', () => {
+  it('returns positive amount for normal charge text', () => {
+    expect(extractSignedPriceFromText('$29.99 charged on June 5, 2026')).toEqual({
+      amount: 29.99,
+      currency: 'USD',
+    });
+  });
+
+  it('returns negative amount when text starts with minus sign before $', () => {
+    expect(extractSignedPriceFromText('-$14.93')).toEqual({ amount: -14.93, currency: 'USD' });
+  });
+
+  it('returns negative amount for minus sign before EUR symbol', () => {
+    expect(extractSignedPriceFromText('-€12,50')).toEqual({ amount: -12.5, currency: 'EUR' });
+  });
+
+  it('returns negative amount when "refund" keyword present', () => {
+    expect(extractSignedPriceFromText('Refund: $14.93')).toEqual({
+      amount: -14.93,
+      currency: 'USD',
+    });
+  });
+
+  it('returns negative amount for "refunded" keyword', () => {
+    expect(extractSignedPriceFromText('$29.99 refunded on June 10, 2026')).toEqual({
+      amount: -29.99,
+      currency: 'USD',
+    });
+  });
+
+  it('returns negative amount for German refund keyword (Rückerstattung)', () => {
+    expect(extractSignedPriceFromText('Rückerstattung €12,50')).toEqual({
+      amount: -12.5,
+      currency: 'EUR',
+    });
+  });
+
+  it('returns negative amount for German Gutschrift keyword', () => {
+    expect(extractSignedPriceFromText('Gutschrift: €5,00')).toEqual({
+      amount: -5.0,
+      currency: 'EUR',
+    });
+  });
+
+  it('returns negative amount for French remboursé keyword', () => {
+    expect(extractSignedPriceFromText('Remboursé: €29,99')).toEqual({
+      amount: -29.99,
+      currency: 'EUR',
+    });
+  });
+
+  it('returns null for zero amounts', () => {
+    expect(extractSignedPriceFromText('Refund: $0.00')).toBeNull();
+  });
+
+  it('returns null when no price is found', () => {
+    expect(extractSignedPriceFromText('No price here')).toBeNull();
   });
 });
