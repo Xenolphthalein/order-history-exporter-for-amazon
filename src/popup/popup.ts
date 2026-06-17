@@ -114,10 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (!currentTab?.id) {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
-        hideProgress();
+        resetUI();
         showStatus(getMessage('errorGetTab'), 'error');
         return;
       }
@@ -138,18 +135,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (response.success) {
         showStatus(getMessage('exportInitiatedStatus'), 'success');
       } else {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
-        hideProgress();
+        resetUI();
         showStatus(response.error || getMessage('exportFailedGeneric'), 'error');
       }
     } catch (error) {
       console.error('Export error:', error);
-      settingsSection.classList.remove('hidden');
-      exportBtn.classList.remove('hidden');
-      stopBtn.classList.add('hidden');
-      hideProgress();
+      resetUI();
       showStatus(getMessage('exportFailedRefresh'), 'error');
     }
   });
@@ -164,9 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tab?.id) {
         await browser.tabs.sendMessage(tab.id, { action: 'stopExport' });
         // Content script is reachable — it will send back an exportStopped
-        // message that triggers the UI reset in the listener below.
-        // Show immediate feedback that the stop was requested:
-        showStatus(getMessage('exportStopped'), 'info');
+        // message that triggers the UI reset and status in the listener below.
         return;
       }
     } catch {
@@ -188,7 +177,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsSection.classList.remove('hidden');
     exportBtn.classList.remove('hidden');
     stopBtn.classList.add('hidden');
-    stopBtn.disabled = false;
     hideProgress();
   }
 

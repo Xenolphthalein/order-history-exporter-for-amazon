@@ -64,7 +64,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       stopRequested = true;
       clearExportState();
       // Notify popup via dedicated action so it doesn't rely on string comparison
-      browser.runtime.sendMessage({ action: 'exportStopped' }).catch(() => {});
+      browser.runtime.sendMessage({ action: 'exportStopped' }).catch(() => {
+        // Popup may not be open — not an error condition
+        console.debug('[Amazon Exporter] Popup not reachable for exportStopped notification');
+      });
       return Promise.resolve({ success: true });
     }
 
@@ -101,30 +104,30 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
    * Check if we should continue an export after page navigation
    */
   function checkExportState(): void {
-    // Wait for page to be fully loaded
-    if (document.readyState !== 'complete') {
-      window.addEventListener('load', () => {
-        setTimeout(checkExportState, 500);
-      });
-      return;
+    const run = (): void => {
+      setTimeout(async () => {
+        // Check if stop was requested while the content script was unloaded
+        const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
+        if (stopFlag[STOP_FLAG_KEY]) {
+          await browser.storage.session.remove(STOP_FLAG_KEY);
+          clearExportState();
+          return;
+        }
+
+        const state = getExportState();
+        if (state && state.inProgress) {
+          console.log('[Amazon Exporter]', getMessage('resumingExport'), state);
+          continueExport(state);
+        }
+      }, 1500);
+    };
+
+    // Wait for page to be fully loaded, then add delay for Amazon's JS to render
+    if (document.readyState === 'complete') {
+      run();
+    } else {
+      window.addEventListener('load', run, { once: true });
     }
-
-    // Additional delay to let Amazon's JS render
-    setTimeout(async () => {
-      // Check if stop was requested while the content script was unloaded
-      const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
-      if (stopFlag[STOP_FLAG_KEY]) {
-        await browser.storage.session.remove(STOP_FLAG_KEY);
-        clearExportState();
-        return;
-      }
-
-      const state = getExportState();
-      if (state && state.inProgress) {
-        console.log('[Amazon Exporter]', getMessage('resumingExport'), state);
-        continueExport(state);
-      }
-    }, 1500);
   }
 
   /**
