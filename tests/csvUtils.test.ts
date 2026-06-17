@@ -176,4 +176,95 @@ describe('convertOrdersToCSV', () => {
     const csv = convertOrdersToCSV(orders);
     expect(csv).toContain('"Product ""with quotes"", and commas"');
   });
+
+  describe('transaction columns', () => {
+    it('should not include transaction columns when includeTransactions is false', () => {
+      const orders = [createOrder()];
+      const csv = convertOrdersToCSV(orders, undefined, false);
+      expect(csv).not.toContain('csvHeaderTransactionDates');
+      expect(csv).not.toContain('csvHeaderTransactionAmounts');
+      const headerCols = csv.split('\n')[0]!.split(',');
+      expect(headerCols.length).toBe(14);
+    });
+
+    it('should include transaction columns when includeTransactions is true', () => {
+      const orders = [createOrder()];
+      const csv = convertOrdersToCSV(orders, undefined, true);
+      expect(csv).toContain('csvHeaderTransactionDates');
+      expect(csv).toContain('csvHeaderTransactionAmounts');
+      const headerCols = csv.split('\n')[0]!.split(',');
+      expect(headerCols.length).toBe(16);
+    });
+
+    it('should populate transaction columns from order.transactions on first item row', () => {
+      const orders = [
+        createOrder({
+          transactions: [
+            { date: '2026-04-17', amount: 14.93, currency: 'USD' },
+            { date: '2026-04-20', amount: 61.01, currency: 'USD' },
+          ],
+          items: [
+            {
+              title: 'Product 1',
+              asin: 'B000000001',
+              quantity: 1,
+              price: 14.93,
+              discount: 0,
+              itemUrl: 'https://amazon.de/dp/B000000001',
+            },
+            {
+              title: 'Product 2',
+              asin: 'B000000002',
+              quantity: 1,
+              price: 61.01,
+              discount: 0,
+              itemUrl: 'https://amazon.de/dp/B000000002',
+            },
+          ],
+        }),
+      ];
+      const csv = convertOrdersToCSV(orders, undefined, true);
+      const lines = csv.split('\n');
+
+      // First item row should have transaction data
+      expect(lines[1]).toContain('2026-04-17 | 2026-04-20');
+      expect(lines[1]).toContain('14.93 | 61.01');
+
+      // Second item row should have empty transaction columns
+      const secondRowCols = lines[2]!.split(',');
+      expect(secondRowCols[14]).toBe('');
+      expect(secondRowCols[15]).toBe('');
+    });
+
+    it('should leave transaction columns empty when order has no transactions', () => {
+      const orders = [createOrder({ transactions: [] })];
+      const csv = convertOrdersToCSV(orders, undefined, true);
+      const lines = csv.split('\n');
+      const dataCols = lines[1]!.split(',');
+      expect(dataCols[14]).toBe('');
+      expect(dataCols[15]).toBe('');
+    });
+
+    it('should leave transaction columns empty when order.transactions is undefined', () => {
+      const orders = [createOrder()]; // no transactions field
+      const csv = convertOrdersToCSV(orders, undefined, true);
+      const lines = csv.split('\n');
+      const dataCols = lines[1]!.split(',');
+      expect(dataCols[14]).toBe('');
+      expect(dataCols[15]).toBe('');
+    });
+
+    it('should populate transaction columns for order with no items', () => {
+      const orders = [
+        createOrder({
+          items: [],
+          transactions: [{ date: '2026-04-17', amount: 75.94, currency: 'USD' }],
+        }),
+      ];
+      const csv = convertOrdersToCSV(orders, undefined, true);
+      const lines = csv.split('\n');
+      expect(lines[1]).toContain('2026-04-17');
+      expect(lines[1]).toContain('75.94');
+    });
+  });
 });

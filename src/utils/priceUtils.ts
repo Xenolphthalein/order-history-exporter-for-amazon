@@ -82,3 +82,34 @@ export function extractPriceFromText(text: string): { amount: number; currency: 
 
   return null;
 }
+
+/**
+ * Like extractPriceFromText but returns negative amounts for refunds/credits.
+ * Negates the amount when:
+ * - The text has an explicit minus sign before the currency symbol or amount, OR
+ * - The text contains a refund/credit keyword in any supported locale.
+ */
+export function extractSignedPriceFromText(
+  text: string
+): { amount: number; currency: string } | null {
+  // Explicit negative sign adjacent to a currency symbol or number
+  const hasMinusSign =
+    /(?:^|[\s(])[-−]\s*(?:EUR|€|\$|£|USD|GBP)\s*[0-9]/.test(text) ||
+    /(?:EUR|€|\$|£|USD|GBP)\s*[-−]\s*[0-9]/.test(text);
+
+  // Refund/credit keywords (EN, DE, FR, IT, ES).
+  // French keywords ending in é/ée cannot use \b (é is non-ASCII → no word boundary),
+  // so they are matched separately with a simple substring check.
+  const isRefundContext =
+    /\b(?:refund(?:ed)?|return(?:ed)?|r[uü]ckerstattung|erstattung|gutschrift|remboursement|rimborso|reembolso(?:ado)?)\b/i.test(
+      text
+    ) || /rembours/i.test(text);
+
+  const price = extractPriceFromText(text);
+  if (!price) return null;
+
+  return {
+    amount: hasMinusSign || isRefundContext ? -price.amount : price.amount,
+    currency: price.currency,
+  };
+}

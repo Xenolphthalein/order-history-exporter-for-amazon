@@ -37,6 +37,7 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
 - **Full History Export** — Export your entire Amazon order history
 - **Date Range Filtering** — Export orders within a specific date range
 - **Multiple Formats** — Export as JSON or CSV
+- **Transaction Details** — Optionally include the actual charged amount and transaction date per order, sourced from Amazon's payments page (not the pre-tax subtotal)
 - **Privacy Focused** — No tracking or data collection; all processing happens locally
 - **Open Source** — Free to use and modify
 
@@ -83,7 +84,8 @@ The built extensions will be in browser-specific directories:
 2. Navigate to Amazon and log in to your account
 3. Click the extension icon in the toolbar
 4. Select your export options (date range, format)
-5. Click "Export" to download your order history
+5. Optionally check **Include transaction details** to add the actual charged amount and transaction date to each order — this fetches one extra page per order so exports will take longer
+6. Click "Export" to download your order history
 
 ---
 
@@ -91,7 +93,7 @@ The built extensions will be in browser-specific directories:
 
 ### JSON Format
 
-The data model for each order includes the following fields:
+The data model for each order includes the following fields. The `transactions` field is only present when "Include transaction details" is enabled.
 
 ```json
 {
@@ -117,7 +119,14 @@ The data model for each order includes the following fields:
             "amount": "number"
         }
     ],
-    "totalSavings": "number"
+    "totalSavings": "number",
+    "transactions": [
+        {
+            "date": "string (ISO 8601 date)",
+            "amount": "number (positive = charge, negative = refund)",
+            "currency": "string"
+        }
+    ]
 }
 ```
 
@@ -141,6 +150,8 @@ The CSV export creates multiple rows for orders with multiple items. Columns:
 | Promotions | Applied promotions |
 | Item URL | Link to product page |
 | Details URL | Link to order details |
+| Transaction Dates | Date(s) Amazon charged your payment method (pipe-separated if multiple); only present when "Include transaction details" is enabled |
+| Transaction Amounts | Charged amount(s) — positive for charges, negative for refunds (pipe-separated if multiple); only present when "Include transaction details" is enabled |
 
 ---
 
