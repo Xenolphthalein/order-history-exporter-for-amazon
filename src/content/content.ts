@@ -20,11 +20,22 @@ import {
   parsePrice,
   parseOrderStatus,
 } from '../utils';
+import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
 (function (): void {
   'use strict';
 
-  const STORAGE_KEY = 'amazonExporter';
+  /**
+   * In-memory stop flag for the current page load.
+   *
+   * Because the content script is reloaded on every page navigation, this flag
+   * only survives within a single page.  For cross-navigation stop requests
+   * (i.e. the user clicks "Stop" while the content script is between pages) we
+   * also persist the flag to `browser.storage.session` under STOP_FLAG_KEY.
+   * `checkExportState` reads that persisted flag on the next page load, so the
+   * stop takes effect even when the direct message is lost.
+   */
+  let stopRequested = false;
 
   /**
    * Get localized message from browser i18n API
@@ -48,6 +59,16 @@ import {
     if (msg.action === 'getExportStatus') {
       const state = getExportState();
       return Promise.resolve(state ? { success: true, ...state } : { success: false });
+    }
+    if (msg.action === 'stopExport') {
+      stopRequested = true;
+      clearExportState();
+      // Notify popup via dedicated action so it doesn't rely on string comparison
+      browser.runtime.sendMessage({ action: 'exportStopped' }).catch(() => {
+        // Popup may not be open — not an error condition
+        console.debug('[Amazon Exporter] Popup not reachable for exportStopped notification');
+      });
+      return Promise.resolve({ success: true });
     }
 
     return undefined;
@@ -83,28 +104,46 @@ import {
    * Check if we should continue an export after page navigation
    */
   function checkExportState(): void {
-    // Wait for page to be fully loaded
-    if (document.readyState !== 'complete') {
-      window.addEventListener('load', () => {
-        setTimeout(checkExportState, 500);
-      });
-      return;
-    }
+    const run = (): void => {
+      setTimeout(async () => {
+        // Check if stop was requested while the content script was unloaded.
+        // Wrap in try-catch: if storage.session is unavailable (missing
+        // permission / unsupported browser), we still want the resume logic
+        // below to execute.
+        try {
+          const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
+          if (stopFlag[STOP_FLAG_KEY]) {
+            await browser.storage.session.remove(STOP_FLAG_KEY);
+            clearExportState();
+            return;
+          }
+        } catch {
+          console.debug('[Amazon Exporter] Could not read stop flag from storage.session');
+        }
 
-    // Additional delay to let Amazon's JS render
-    setTimeout(() => {
-      const state = getExportState();
-      if (state && state.inProgress) {
-        console.log('[Amazon Exporter]', getMessage('resumingExport'), state);
-        continueExport(state);
-      }
-    }, 1500);
+        const state = getExportState();
+        if (state && state.inProgress) {
+          console.log('[Amazon Exporter]', getMessage('resumingExport'), state);
+          continueExport(state);
+        }
+      }, 1500);
+    };
+
+    // Wait for page to be fully loaded, then add delay for Amazon's JS to render
+    if (document.readyState === 'complete') {
+      run();
+    } else {
+      window.addEventListener('load', run, { once: true });
+    }
   }
 
   /**
    * Start a new export
    */
   function startExport(options: ExportOptions): void {
+    // Reset stop flag for fresh export
+    stopRequested = false;
+
     const { format, startDate, endDate, exportAll } = options;
 
     // Get available years
@@ -162,6 +201,11 @@ import {
    * Continue an export after page navigation
    */
   function continueExport(state: ExportState): void {
+    // Check if stop was requested while away (e.g. between page navigations)
+    if (stopRequested || !getExportState()) {
+      return;
+    }
+
     const currentYear = state.yearsToProcess[state.currentYearIndex];
     const pageNum = String(Math.floor(state.currentStartIndex / 10) + 1);
     updateProgress(
@@ -176,6 +220,11 @@ import {
    * Scrape the current page and decide what to do next
    */
   function scrapeCurrentPageAndContinue(state: ExportState): void {
+    // Check if stop was requested mid-export
+    if (stopRequested || !getExportState()) {
+      return;
+    }
+
     const startDateObj = state.startDate ? new Date(state.startDate) : null;
     const endDateObj = state.endDate ? new Date(state.endDate) : null;
 
@@ -245,6 +294,11 @@ import {
 
     // Fetch item prices for multi-item orders
     await fetchOrderDetailsForPrices(state.collectedOrders);
+
+    // Check if stop was requested during price fetching (state already cleared by handler)
+    if (stopRequested || !getExportState()) {
+      return;
+    }
 
     updateProgress(95, getMessage('generatingFile'));
 
@@ -665,6 +719,11 @@ import {
     console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'orders');
 
     for (let i = 0; i < ordersNeedingDetails.length; i++) {
+      // Check if stop was requested during price fetching
+      if (stopRequested || !getExportState()) {
+        break;
+      }
+
       const order = ordersNeedingDetails[i];
       if (!order) continue;
 

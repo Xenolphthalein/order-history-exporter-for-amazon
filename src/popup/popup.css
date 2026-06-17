@@ -137,6 +137,22 @@ header h1 {
   cursor: not-allowed;
 }
 
+.btn-stop {
+  width: 100%;
+  background: #dc3545;
+  border: 1px solid #bd2130;
+  color: #fff;
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.btn-stop:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-link {
   background: none;
   color: #0066c0;
@@ -146,27 +162,6 @@ header h1 {
 .btn-link:hover {
   color: #c45500;
   text-decoration: underline;
-}
-
-.btn-loading {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #333;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .progress-bar {

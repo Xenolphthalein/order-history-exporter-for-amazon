@@ -6,6 +6,7 @@
 import browser from 'webextension-polyfill';
 import type { ExportOptions, ProgressData } from '../types';
 import { isAmazonOrderHistoryPage } from '../utils';
+import { STOP_FLAG_KEY } from '../constants';
 
 /**
  * Get localized message from browser i18n API
@@ -35,8 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notAmazonEl = document.getElementById('not-amazon') as HTMLElement;
   const mainContentEl = document.getElementById('main-content') as HTMLElement;
   const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
-  const btnText = exportBtn.querySelector('.btn-text') as HTMLElement;
-  const btnLoading = exportBtn.querySelector('.btn-loading') as HTMLElement;
+  const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement;
   const progressSection = document.getElementById('progress-section') as HTMLElement;
   const progressFill = document.getElementById('progressFill') as HTMLElement;
   const progressText = document.getElementById('progressText') as HTMLElement;
@@ -104,17 +104,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Start export - hide settings and show progress
+    // Start export - hide settings, show progress and stop button
     settingsSection.classList.add('hidden');
     exportBtn.classList.add('hidden');
+    stopBtn.classList.remove('hidden');
+    stopBtn.disabled = false;
     showProgress(0, getMessage('exportStartedMessage'));
     showStatus(getMessage('exportStartedStatus'), 'success');
 
     try {
       if (!currentTab?.id) {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        hideProgress();
+        resetUI();
         showStatus(getMessage('errorGetTab'), 'error');
         return;
       }
@@ -135,40 +135,75 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (response.success) {
         showStatus(getMessage('exportInitiatedStatus'), 'success');
       } else {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        hideProgress();
+        resetUI();
         showStatus(response.error || getMessage('exportFailedGeneric'), 'error');
       }
     } catch (error) {
       console.error('Export error:', error);
-      settingsSection.classList.remove('hidden');
-      exportBtn.classList.remove('hidden');
-      hideProgress();
+      resetUI();
       showStatus(getMessage('exportFailedRefresh'), 'error');
     }
   });
 
+  // Handle stop button click
+  stopBtn.addEventListener('click', async () => {
+    stopBtn.disabled = true;
+
+    try {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (tab?.id) {
+        await browser.tabs.sendMessage(tab.id, { action: 'stopExport' });
+        // Content script is reachable — it will send back an exportStopped
+        // message that triggers the UI reset and status in the listener below.
+        return;
+      }
+    } catch {
+      // Content script may be between page loads — persist stop flag so the
+      // next page load can detect it and abort the auto-resume.
+      try {
+        await browser.storage.session.set({ [STOP_FLAG_KEY]: true });
+      } catch {
+        console.debug('[Amazon Exporter] Could not persist stop flag to storage.session');
+      }
+    }
+
+    // Fallback path: content script was unreachable or tab had no id.
+    // The exportStopped message won't arrive, so reset the UI directly.
+    resetUI();
+    showStatus(getMessage('exportStopped'), 'info');
+  });
+
+  /**
+   * Restore the popup UI to its idle state (settings + export button visible)
+   */
+  function resetUI(): void {
+    settingsSection.classList.remove('hidden');
+    exportBtn.classList.remove('hidden');
+    stopBtn.classList.add('hidden');
+    hideProgress();
+  }
+
   // Listen for progress updates from content script
   browser.runtime.onMessage.addListener((message: unknown) => {
     const msg = message as { action: string; data?: ProgressData };
+
+    if (msg.action === 'exportStopped') {
+      resetUI();
+      showStatus(getMessage('exportStopped'), 'info');
+      return;
+    }
+
     if (msg.action === 'updateProgress' && msg.data) {
       showProgress(msg.data.percent, msg.data.message);
 
       // If complete, show success message and restore UI
       if (msg.data.percent >= 100) {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
+        resetUI();
         showStatus(msg.data.message, 'success');
       }
     }
   });
-
-  function setLoading(loading: boolean): void {
-    exportBtn.disabled = loading;
-    btnText.classList.toggle('hidden', loading);
-    btnLoading.classList.toggle('hidden', !loading);
-  }
 
   function showProgress(percent: number, text: string): void {
     progressSection.classList.remove('hidden');
@@ -185,15 +220,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusMessage.className = `status-message ${type}`;
     statusMessage.classList.remove('hidden');
 
-    // Auto-hide success messages after 5 seconds
-    if (type === 'success') {
+    // Auto-hide success and info messages after 5 seconds
+    if (type === 'success' || type === 'info') {
       setTimeout(() => {
         statusMessage.classList.add('hidden');
       }, 5000);
     }
   }
-
-  // Suppress unused function warnings
-  void setLoading;
-  void hideProgress;
 });
