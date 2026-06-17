@@ -693,7 +693,6 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           );
           if (qtyMatch?.[1]) {
             item.quantity = parseInt(qtyMatch[1], 10);
-            foundQuantity = true;
             break;
           }
           parentEl = parentEl.parentElement;

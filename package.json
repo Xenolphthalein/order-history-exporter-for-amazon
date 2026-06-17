@@ -35,19 +35,19 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@types/webextension-polyfill": "0.12.4",
-    "@typescript-eslint/eslint-plugin": "8.54.0",
-    "@typescript-eslint/parser": "8.54.0",
-    "@vitest/coverage-v8": "4.0.18",
-    "esbuild": "0.27.2",
-    "eslint": "9.39.2",
+    "@eslint/js": "^10.0.1",
+    "@types/webextension-polyfill": "^0.12.5",
+    "@typescript-eslint/eslint-plugin": "^8.61.1",
+    "@typescript-eslint/parser": "^8.61.1",
+    "@vitest/coverage-v8": "^4.1.9",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
-    "knip": "5.82.1",
-    "prettier": "^3.8.1",
-    "typescript": "5.9.3",
-    "vitest": "4.0.18"
+    "knip": "^6.17.1",
+    "prettier": "^3.8.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "webextension-polyfill": "0.12.0"
