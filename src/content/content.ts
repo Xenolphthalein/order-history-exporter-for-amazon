@@ -26,6 +26,9 @@ import {
 
   const STORAGE_KEY = 'amazonExporter';
 
+  /** Flag set to true when the user requests a stop */
+  let stopRequested = false;
+
   /**
    * Get localized message from browser i18n API
    */
@@ -48,6 +51,12 @@ import {
     if (msg.action === 'getExportStatus') {
       const state = getExportState();
       return Promise.resolve(state ? { success: true, ...state } : { success: false });
+    }
+    if (msg.action === 'stopExport') {
+      stopRequested = true;
+      clearExportState();
+      updateProgress(0, getMessage('exportStopped'));
+      return Promise.resolve({ success: true });
     }
 
     return undefined;
@@ -162,6 +171,11 @@ import {
    * Continue an export after page navigation
    */
   function continueExport(state: ExportState): void {
+    // Check if stop was requested while away (e.g. between page navigations)
+    if (stopRequested || !getExportState()) {
+      return;
+    }
+
     const currentYear = state.yearsToProcess[state.currentYearIndex];
     const pageNum = String(Math.floor(state.currentStartIndex / 10) + 1);
     updateProgress(
@@ -176,6 +190,11 @@ import {
    * Scrape the current page and decide what to do next
    */
   function scrapeCurrentPageAndContinue(state: ExportState): void {
+    // Check if stop was requested mid-export
+    if (stopRequested || !getExportState()) {
+      return;
+    }
+
     const startDateObj = state.startDate ? new Date(state.startDate) : null;
     const endDateObj = state.endDate ? new Date(state.endDate) : null;
 
@@ -245,6 +264,12 @@ import {
 
     // Fetch item prices for multi-item orders
     await fetchOrderDetailsForPrices(state.collectedOrders);
+
+    // Check if stop was requested during price fetching
+    if (stopRequested || !getExportState()) {
+      clearExportState();
+      return;
+    }
 
     updateProgress(95, getMessage('generatingFile'));
 
@@ -665,6 +690,11 @@ import {
     console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'orders');
 
     for (let i = 0; i < ordersNeedingDetails.length; i++) {
+      // Check if stop was requested during price fetching
+      if (stopRequested || !getExportState()) {
+        break;
+      }
+
       const order = ordersNeedingDetails[i];
       if (!order) continue;
 

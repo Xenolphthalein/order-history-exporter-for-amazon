@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notAmazonEl = document.getElementById('not-amazon') as HTMLElement;
   const mainContentEl = document.getElementById('main-content') as HTMLElement;
   const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
+  const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement;
   const btnText = exportBtn.querySelector('.btn-text') as HTMLElement;
   const btnLoading = exportBtn.querySelector('.btn-loading') as HTMLElement;
   const progressSection = document.getElementById('progress-section') as HTMLElement;
@@ -104,9 +105,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Start export - hide settings and show progress
+    // Start export - hide settings, show progress and stop button
     settingsSection.classList.add('hidden');
     exportBtn.classList.add('hidden');
+    stopBtn.classList.remove('hidden');
     showProgress(0, getMessage('exportStartedMessage'));
     showStatus(getMessage('exportStartedStatus'), 'success');
 
@@ -114,6 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!currentTab?.id) {
         settingsSection.classList.remove('hidden');
         exportBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
         hideProgress();
         showStatus(getMessage('errorGetTab'), 'error');
         return;
@@ -137,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         settingsSection.classList.remove('hidden');
         exportBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
         hideProgress();
         showStatus(response.error || getMessage('exportFailedGeneric'), 'error');
       }
@@ -144,9 +148,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Export error:', error);
       settingsSection.classList.remove('hidden');
       exportBtn.classList.remove('hidden');
+      stopBtn.classList.add('hidden');
       hideProgress();
       showStatus(getMessage('exportFailedRefresh'), 'error');
     }
+  });
+
+  // Handle stop button click
+  stopBtn.addEventListener('click', async () => {
+    stopBtn.disabled = true;
+
+    try {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (tab?.id) {
+        await browser.tabs.sendMessage(tab.id, { action: 'stopExport' });
+      }
+    } catch {
+      // Content script may be between page loads; clearing state covers this case
+    }
+
+    // Restore UI
+    settingsSection.classList.remove('hidden');
+    exportBtn.classList.remove('hidden');
+    stopBtn.classList.add('hidden');
+    hideProgress();
+    showStatus(getMessage('exportStopped'), 'info');
   });
 
   // Listen for progress updates from content script
@@ -159,7 +186,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (msg.data.percent >= 100) {
         settingsSection.classList.remove('hidden');
         exportBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
         showStatus(msg.data.message, 'success');
+      }
+
+      // If stopped, restore UI
+      if (msg.data.message === getMessage('exportStopped')) {
+        settingsSection.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
+        hideProgress();
       }
     }
   });

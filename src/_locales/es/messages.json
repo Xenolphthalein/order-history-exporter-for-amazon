@@ -47,6 +47,10 @@
     "message": "Exportar pedidos",
     "description": "Export button text"
   },
+  "stopExport": {
+    "message": "Detener exportación",
+    "description": "Stop button text"
+  },
   "exporting": {
     "message": "Exportando...",
     "description": "Text shown while exporting"
@@ -140,6 +144,10 @@
   "generatingFile": {
     "message": "Generando archivo...",
     "description": "Progress message while generating file"
+  },
+  "exportStopped": {
+    "message": "Exportación detenida por el usuario.",
+    "description": "Status message when export is stopped"
   },
   "exportComplete": {
     "message": "¡Exportación completada! $COUNT$ pedidos exportados.",

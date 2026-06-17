@@ -137,6 +137,22 @@ header h1 {
   cursor: not-allowed;
 }
 
+.btn-stop {
+  width: 100%;
+  background: #dc3545;
+  border: 1px solid #bd2130;
+  color: #fff;
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.btn-stop:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-link {
   background: none;
   color: #0066c0;

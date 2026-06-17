@@ -47,6 +47,10 @@
     "message": "Exporter les commandes",
     "description": "Export button text"
   },
+  "stopExport": {
+    "message": "Arrêter l'exportation",
+    "description": "Stop button text"
+  },
   "exporting": {
     "message": "Exportation...",
     "description": "Text shown while exporting"
@@ -140,6 +144,10 @@
   "generatingFile": {
     "message": "Génération du fichier...",
     "description": "Progress message while generating file"
+  },
+  "exportStopped": {
+    "message": "Exportation arrêtée par l'utilisateur.",
+    "description": "Status message when export is stopped"
   },
   "exportComplete": {
     "message": "Exportation terminée ! $COUNT$ commandes exportées.",
