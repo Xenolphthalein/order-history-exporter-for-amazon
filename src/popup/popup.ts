@@ -161,7 +161,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch {
       // Content script may be between page loads — persist stop flag so the
       // next page load can detect it and abort the auto-resume.
-      await browser.storage.session.set({ [STOP_FLAG_KEY]: true });
+      try {
+        await browser.storage.session.set({ [STOP_FLAG_KEY]: true });
+      } catch {
+        console.debug('[Amazon Exporter] Could not persist stop flag to storage.session');
+      }
     }
 
     // Fallback path: content script was unreachable or tab had no id.

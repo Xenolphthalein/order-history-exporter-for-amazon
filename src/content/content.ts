@@ -106,12 +106,19 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   function checkExportState(): void {
     const run = (): void => {
       setTimeout(async () => {
-        // Check if stop was requested while the content script was unloaded
-        const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
-        if (stopFlag[STOP_FLAG_KEY]) {
-          await browser.storage.session.remove(STOP_FLAG_KEY);
-          clearExportState();
-          return;
+        // Check if stop was requested while the content script was unloaded.
+        // Wrap in try-catch: if storage.session is unavailable (missing
+        // permission / unsupported browser), we still want the resume logic
+        // below to execute.
+        try {
+          const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
+          if (stopFlag[STOP_FLAG_KEY]) {
+            await browser.storage.session.remove(STOP_FLAG_KEY);
+            clearExportState();
+            return;
+          }
+        } catch {
+          console.debug('[Amazon Exporter] Could not read stop flag from storage.session');
         }
 
         const state = getExportState();
