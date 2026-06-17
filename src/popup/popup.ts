@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsSection.classList.add('hidden');
     exportBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
+    stopBtn.disabled = false;
     showProgress(0, getMessage('exportStartedMessage'));
     showStatus(getMessage('exportStartedStatus'), 'success');
 
