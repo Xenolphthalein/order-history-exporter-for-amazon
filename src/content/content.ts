@@ -25,6 +25,7 @@ import {
   'use strict';
 
   const STORAGE_KEY = 'amazonExporter';
+  const STOP_FLAG_KEY = 'amazonExporterStopRequested';
 
   /** Flag set to true when the user requests a stop */
   let stopRequested = false;
@@ -55,7 +56,6 @@ import {
     if (msg.action === 'stopExport') {
       stopRequested = true;
       clearExportState();
-      updateProgress(0, getMessage('exportStopped'));
       // Notify popup via dedicated action so it doesn't rely on string comparison
       browser.runtime.sendMessage({ action: 'exportStopped' }).catch(() => {});
       return Promise.resolve({ success: true });
@@ -105,9 +105,9 @@ import {
     // Additional delay to let Amazon's JS render
     setTimeout(async () => {
       // Check if stop was requested while the content script was unloaded
-      const stopFlag = await browser.storage.session.get('amazonExporterStopRequested');
-      if (stopFlag.amazonExporterStopRequested) {
-        await browser.storage.session.remove('amazonExporterStopRequested');
+      const stopFlag = await browser.storage.session.get(STOP_FLAG_KEY);
+      if (stopFlag[STOP_FLAG_KEY]) {
+        await browser.storage.session.remove(STOP_FLAG_KEY);
         clearExportState();
         return;
       }
@@ -278,9 +278,8 @@ import {
     // Fetch item prices for multi-item orders
     await fetchOrderDetailsForPrices(state.collectedOrders);
 
-    // Check if stop was requested during price fetching
+    // Check if stop was requested during price fetching (state already cleared by handler)
     if (stopRequested || !getExportState()) {
-      clearExportState();
       return;
     }
 

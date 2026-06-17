@@ -7,6 +7,8 @@ import browser from 'webextension-polyfill';
 import type { ExportOptions, ProgressData } from '../types';
 import { isAmazonOrderHistoryPage } from '../utils';
 
+const STOP_FLAG_KEY = 'amazonExporterStopRequested';
+
 /**
  * Get localized message from browser i18n API
  */
@@ -167,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch {
       // Content script may be between page loads — persist stop flag so the
       // next page load can detect it and abort the auto-resume.
-      await browser.storage.session.set({ amazonExporterStopRequested: true });
+      await browser.storage.session.set({ [STOP_FLAG_KEY]: true });
     }
 
     // Restore UI
@@ -182,6 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsSection.classList.remove('hidden');
     exportBtn.classList.remove('hidden');
     stopBtn.classList.add('hidden');
+    stopBtn.disabled = false;
     hideProgress();
   }
 
