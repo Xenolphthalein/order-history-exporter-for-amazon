@@ -532,6 +532,15 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   }
 
   /**
+   * Read an order card's text without injected <script>/<style> source to avoid polluting the regexes.
+   */
+  function getOrderCardText(orderEl: Element): string {
+    const clone = orderEl.cloneNode(true) as Element;
+    clone.querySelectorAll('script, style, noscript').forEach((el) => el.remove());
+    return clone.textContent || '';
+  }
+
+  /**
    * Parse a single order element
    */
   function parseOrderElement(orderEl: Element): Order | null {
@@ -547,7 +556,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       totalSavings: 0,
     };
 
-    const orderText = orderEl.textContent || '';
+    const orderText = getOrderCardText(orderEl);
 
     // Extract Order ID
     order.orderId = extractOrderId(orderText) || '';

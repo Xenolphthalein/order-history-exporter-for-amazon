@@ -60,22 +60,23 @@ export function detectCurrency(text: string): string {
  */
 export function extractPriceFromText(text: string): { amount: number; currency: string } | null {
   const pricePatterns = [
-    /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€)?\s*([0-9.,]+)\s*(?:EUR|€)?/i,
-    /(?:EUR|€)\s*([0-9.,]+)/i,
-    /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/,
-    /\$\s*([0-9.,]+)/,
-    /£\s*([0-9.,]+)/,
+    /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€|\$|£)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£)?/gi,
+    /(?:EUR|€)\s*([0-9][0-9.,]*)/gi,
+    /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
+    /\$\s*([0-9][0-9.,]*)/g,
+    /£\s*([0-9][0-9.,]*)/g,
   ];
 
   for (const pattern of pricePatterns) {
-    const match = text.match(pattern);
-    if (match?.[1]) {
-      const amount = parsePrice(match[1]);
-      if (amount > 0) {
-        return {
-          amount,
-          currency: detectCurrency(text),
-        };
+    for (const match of text.matchAll(pattern)) {
+      if (match[1]) {
+        const amount = parsePrice(match[1]);
+        if (amount > 0) {
+          return {
+            amount,
+            currency: detectCurrency(text),
+          };
+        }
       }
     }
   }
