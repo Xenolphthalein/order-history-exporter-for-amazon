@@ -165,37 +165,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         await browser.tabs.sendMessage(tab.id, { action: 'stopExport' });
       }
     } catch {
-      // Content script may be between page loads; clearing state covers this case
+      // Content script may be between page loads — persist stop flag so the
+      // next page load can detect it and abort the auto-resume.
+      await browser.storage.session.set({ amazonExporterStopRequested: true });
     }
 
     // Restore UI
+    resetUI();
+    showStatus(getMessage('exportStopped'), 'info');
+  });
+
+  /**
+   * Restore the popup UI to its idle state (settings + export button visible)
+   */
+  function resetUI(): void {
     settingsSection.classList.remove('hidden');
     exportBtn.classList.remove('hidden');
     stopBtn.classList.add('hidden');
     hideProgress();
-    showStatus(getMessage('exportStopped'), 'info');
-  });
+  }
 
   // Listen for progress updates from content script
   browser.runtime.onMessage.addListener((message: unknown) => {
     const msg = message as { action: string; data?: ProgressData };
+
+    if (msg.action === 'exportStopped') {
+      resetUI();
+      showStatus(getMessage('exportStopped'), 'info');
+      return;
+    }
+
     if (msg.action === 'updateProgress' && msg.data) {
       showProgress(msg.data.percent, msg.data.message);
 
       // If complete, show success message and restore UI
       if (msg.data.percent >= 100) {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
+        resetUI();
         showStatus(msg.data.message, 'success');
-      }
-
-      // If stopped, restore UI
-      if (msg.data.message === getMessage('exportStopped')) {
-        settingsSection.classList.remove('hidden');
-        exportBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
-        hideProgress();
       }
     }
   });
@@ -231,5 +237,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Suppress unused function warnings
   void setLoading;
-  void hideProgress;
 });
