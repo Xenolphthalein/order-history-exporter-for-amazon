@@ -6,8 +6,7 @@
 import browser from 'webextension-polyfill';
 import type { ExportOptions, ProgressData } from '../types';
 import { isAmazonOrderHistoryPage } from '../utils';
-
-const STOP_FLAG_KEY = 'amazonExporterStopRequested';
+import { STOP_FLAG_KEY } from '../constants';
 
 /**
  * Get localized message from browser i18n API
@@ -38,8 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const mainContentEl = document.getElementById('main-content') as HTMLElement;
   const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
   const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement;
-  const btnText = exportBtn.querySelector('.btn-text') as HTMLElement;
-  const btnLoading = exportBtn.querySelector('.btn-loading') as HTMLElement;
   const progressSection = document.getElementById('progress-section') as HTMLElement;
   const progressFill = document.getElementById('progressFill') as HTMLElement;
   const progressText = document.getElementById('progressText') as HTMLElement;
@@ -165,6 +162,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tab = tabs[0];
       if (tab?.id) {
         await browser.tabs.sendMessage(tab.id, { action: 'stopExport' });
+        // Content script is reachable — it will send back an exportStopped
+        // message that triggers the UI reset in the listener below.
+        // Show immediate feedback that the stop was requested:
+        showStatus(getMessage('exportStopped'), 'info');
+        return;
       }
     } catch {
       // Content script may be between page loads — persist stop flag so the
@@ -172,7 +174,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       await browser.storage.session.set({ [STOP_FLAG_KEY]: true });
     }
 
-    // Restore UI
+    // Fallback path: content script was unreachable or tab had no id.
+    // The exportStopped message won't arrive, so reset the UI directly.
     resetUI();
     showStatus(getMessage('exportStopped'), 'info');
   });
@@ -209,12 +212,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  function setLoading(loading: boolean): void {
-    exportBtn.disabled = loading;
-    btnText.classList.toggle('hidden', loading);
-    btnLoading.classList.toggle('hidden', !loading);
-  }
-
   function showProgress(percent: number, text: string): void {
     progressSection.classList.remove('hidden');
     progressFill.style.width = `${percent}%`;
@@ -230,14 +227,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusMessage.className = `status-message ${type}`;
     statusMessage.classList.remove('hidden');
 
-    // Auto-hide success messages after 5 seconds
-    if (type === 'success') {
+    // Auto-hide success and info messages after 5 seconds
+    if (type === 'success' || type === 'info') {
       setTimeout(() => {
         statusMessage.classList.add('hidden');
       }, 5000);
     }
   }
-
-  // Suppress unused function warnings
-  void setLoading;
 });

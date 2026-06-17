@@ -20,14 +20,21 @@ import {
   parsePrice,
   parseOrderStatus,
 } from '../utils';
+import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
 (function (): void {
   'use strict';
 
-  const STORAGE_KEY = 'amazonExporter';
-  const STOP_FLAG_KEY = 'amazonExporterStopRequested';
-
-  /** Flag set to true when the user requests a stop */
+  /**
+   * In-memory stop flag for the current page load.
+   *
+   * Because the content script is reloaded on every page navigation, this flag
+   * only survives within a single page.  For cross-navigation stop requests
+   * (i.e. the user clicks "Stop" while the content script is between pages) we
+   * also persist the flag to `browser.storage.session` under STOP_FLAG_KEY.
+   * `checkExportState` reads that persisted flag on the next page load, so the
+   * stop takes effect even when the direct message is lost.
+   */
   let stopRequested = false;
 
   /**
