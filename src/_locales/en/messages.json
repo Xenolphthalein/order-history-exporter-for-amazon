@@ -226,5 +226,21 @@
   "csvHeaderDetailsUrl": {
     "message": "Details URL",
     "description": "CSV header for details URL"
+  },
+  "csvHeaderRecipientName": {
+    "message": "Recipient Name",
+    "description": "CSV header for the shipping recipient's name"
+  },
+  "csvHeaderRecipientStreet": {
+    "message": "Recipient Street",
+    "description": "CSV header for the shipping recipient's street address (may include multiple lines joined by commas)"
+  },
+  "csvHeaderRecipientCityPostal": {
+    "message": "Recipient City / Postal",
+    "description": "CSV header for the shipping recipient's city and postal code line"
+  },
+  "csvHeaderRecipientCountry": {
+    "message": "Recipient Country",
+    "description": "CSV header for the shipping recipient's country"
   }
 }

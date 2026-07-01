@@ -21,6 +21,10 @@ export interface Order {
   detailsUrl: string;
   promotions: Promotion[];
   totalSavings: number;
+  recipientName: string;
+  recipientStreet: string;
+  recipientCityPostal: string;
+  recipientCountry: string;
 }
 
 export interface Promotion {

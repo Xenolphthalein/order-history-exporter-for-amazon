@@ -545,6 +545,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       detailsUrl: '',
       promotions: [],
       totalSavings: 0,
+      recipientName: '',
+      recipientStreet: '',
+      recipientCityPostal: '',
+      recipientCountry: '',
     };
 
     const orderText = orderEl.textContent || '';
@@ -592,6 +596,13 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Extract Items
     order.items = parseOrderItems(orderEl);
 
+    // Extract Recipient (name + address)
+    const recipient = parseRecipient(orderEl);
+    order.recipientName = recipient.name;
+    order.recipientStreet = recipient.street;
+    order.recipientCityPostal = recipient.cityPostal;
+    order.recipientCountry = recipient.country;
+
     // Filter out advertisement/fake orders
     // These typically have no date, no status, no details URL, and contain ads like "Amazon Visa"
     if (isAdvertisementOrder(order)) {
@@ -600,6 +611,103 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     }
 
     return order;
+  }
+
+  /**
+   * Parse the recipient (name + shipping address) from an order element.
+   *
+   * Amazon embeds the shipping address inside `.yohtmlc-recipient`:
+   *  - The recipient name is inside `<a class="...insert-encrypted-trigger-text">`
+   *  - The full address is preloaded inside `.a-popover-preload`, as three `.a-row`s:
+   *      1. <h5>Name</h5>
+   *      2. Street lines + city/postal, separated by <br>
+   *      3. Country
+   *
+   * Returns empty strings for any field that cannot be located.
+   */
+  function parseRecipient(orderEl: Element): {
+    name: string;
+    street: string;
+    cityPostal: string;
+    country: string;
+  } {
+    const result = { name: '', street: '', cityPostal: '', country: '' };
+
+    const recipientEl = orderEl.querySelector('.yohtmlc-recipient');
+    if (!recipientEl) return result;
+
+    // Name: the trigger text inside the popover anchor
+    const triggerEl = recipientEl.querySelector(
+      'a.a-popover-trigger, .insert-encrypted-trigger-text'
+    );
+    if (triggerEl) {
+      // textContent includes the trailing icon span; .trim() handles whitespace,
+      // and the icon has no text so it doesn't pollute the result.
+      result.name = (triggerEl.textContent || '').trim();
+    }
+
+    // Full address: from the preloaded popover content
+    const preloadEl = recipientEl.querySelector('.a-popover-preload');
+    if (!preloadEl) return result;
+
+    const rows = preloadEl.querySelectorAll('.a-row');
+    if (rows.length === 0) return result;
+
+    // Fallback for name from the h5 inside the popover
+    if (!result.name) {
+      const h5 = preloadEl.querySelector('h5');
+      if (h5) result.name = (h5.textContent || '').trim();
+    }
+
+    // Walk through rows; skip the name row (the one containing an h5).
+    const addressRows: Element[] = [];
+    rows.forEach((row) => {
+      if (!row.querySelector('h5')) addressRows.push(row);
+    });
+
+    if (addressRows.length === 0) return result;
+
+    // Last address row = country. Everything before = street lines + city/postal.
+    const countryEl = addressRows[addressRows.length - 1];
+    if (countryEl) {
+      result.country = (countryEl.textContent || '').trim();
+    }
+
+    const streetRows = addressRows.slice(0, -1);
+
+    // Each row may contain multiple lines separated by <br>. Replace <br> with \n,
+    // strip remaining HTML, split into lines.
+    const allLines: string[] = [];
+    streetRows.forEach((row) => {
+      const html = row.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+      const decoded = decodeHtmlEntities(html);
+      decoded
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => allLines.push(line));
+    });
+
+    if (allLines.length === 0) return result;
+
+    // Heuristic: the last line of the address block is the city + postal code
+    // (e.g. "Châteaumeillant 18370" or "Paris 75009"). Everything above is the
+    // street (possibly multi-line: "27, Rue X" + "Apt B" + ...).
+    result.cityPostal = allLines[allLines.length - 1] ?? '';
+    result.street = allLines.slice(0, -1).join(', ');
+
+    return result;
+  }
+
+  /**
+   * Lightweight HTML entity decoder for the small subset Amazon uses in addresses
+   * (we run inside a content script, so we can also leverage a textarea trick if
+   * needed, but a simple replacement covers the common cases).
+   */
+  function decodeHtmlEntities(text: string): string {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
   }
 
   /**

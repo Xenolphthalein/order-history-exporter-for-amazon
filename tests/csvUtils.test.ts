@@ -68,6 +68,10 @@ describe('convertOrdersToCSV', () => {
     detailsUrl: 'https://amazon.de/order-details/123',
     promotions: [],
     totalSavings: 0,
+    recipientName: '',
+    recipientStreet: '',
+    recipientCityPostal: '',
+    recipientCountry: '',
     ...overrides,
   });
 
@@ -175,5 +179,67 @@ describe('convertOrdersToCSV', () => {
     ];
     const csv = convertOrdersToCSV(orders);
     expect(csv).toContain('"Product ""with quotes"", and commas"');
+  });
+
+  it('should include recipient fields in headers', () => {
+    const csv = convertOrdersToCSV([]);
+    expect(csv).toContain('csvHeaderRecipientName');
+    expect(csv).toContain('csvHeaderRecipientStreet');
+    expect(csv).toContain('csvHeaderRecipientCityPostal');
+    expect(csv).toContain('csvHeaderRecipientCountry');
+  });
+
+  it('should include recipient values for an order without items', () => {
+    const orders = [
+      createOrder({
+        recipientName: 'Jeremy Ferand',
+        recipientStreet: '2, Lieu-dit La Croix des Marais',
+        recipientCityPostal: 'Châteaumeillant 18370',
+        recipientCountry: 'France',
+      }),
+    ];
+    const csv = convertOrdersToCSV(orders);
+    expect(csv).toContain('Jeremy Ferand');
+    expect(csv).toContain('"2, Lieu-dit La Croix des Marais"');
+    expect(csv).toContain('Châteaumeillant 18370');
+    expect(csv).toContain('France');
+  });
+
+  it('should only include recipient on the first item row of a multi-item order', () => {
+    const orders = [
+      createOrder({
+        recipientName: 'Jeremy Ferand',
+        recipientStreet: '2, Lieu-dit La Croix des Marais',
+        recipientCityPostal: 'Châteaumeillant 18370',
+        recipientCountry: 'France',
+        items: [
+          {
+            title: 'Product 1',
+            asin: 'B000000001',
+            quantity: 1,
+            price: 29.99,
+            discount: 0,
+            itemUrl: 'https://amazon.de/dp/B000000001',
+          },
+          {
+            title: 'Product 2',
+            asin: 'B000000002',
+            quantity: 1,
+            price: 15.0,
+            discount: 0,
+            itemUrl: 'https://amazon.de/dp/B000000002',
+          },
+        ],
+      }),
+    ];
+    const csv = convertOrdersToCSV(orders);
+    const lines = csv.split('\n');
+
+    // First item row should carry the recipient
+    expect(lines[1]).toContain('Jeremy Ferand');
+    // Second item row should not repeat the recipient (last 4 columns must be empty)
+    const secondRowParts = lines[2]!.split(',');
+    const last4 = secondRowParts.slice(-4);
+    expect(last4).toEqual(['', '', '', '']);
   });
 });
