@@ -117,7 +117,11 @@ The data model for each order includes the following fields:
             "amount": "number"
         }
     ],
-    "totalSavings": "number"
+    "totalSavings": "number",
+    "recipientName": "string (shipping recipient's name)",
+    "recipientStreet": "string (street lines joined by commas; may be empty)",
+    "recipientCityPostal": "string (city and postal code line; may be empty)",
+    "recipientCountry": "string (may be empty)"
 }
 ```
 
@@ -141,6 +145,10 @@ The CSV export creates multiple rows for orders with multiple items. Columns:
 | Promotions | Applied promotions |
 | Item URL | Link to product page |
 | Details URL | Link to order details |
+| Recipient Name | Shipping recipient's name (on the first item row only) |
+| Recipient Street | Shipping street address, multi-line joined by commas (on the first item row only) |
+| Recipient City / Postal | Shipping city and postal code line (on the first item row only) |
+| Recipient Country | Shipping country (on the first item row only) |
 
 ---
 

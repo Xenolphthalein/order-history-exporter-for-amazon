@@ -50,6 +50,10 @@ export function convertOrdersToCSV(
     getHeader('csvHeaderPromotions'),
     getHeader('csvHeaderItemUrl'),
     getHeader('csvHeaderDetailsUrl'),
+    getHeader('csvHeaderRecipientName'),
+    getHeader('csvHeaderRecipientStreet'),
+    getHeader('csvHeaderRecipientCityPostal'),
+    getHeader('csvHeaderRecipientCountry'),
   ];
 
   const rows: string[] = [headers.join(',')];
@@ -74,6 +78,10 @@ export function convertOrdersToCSV(
           escapeCSVValue(promotionsStr),
           '',
           escapeCSVValue(order.detailsUrl),
+          escapeCSVValue(order.recipientName),
+          escapeCSVValue(order.recipientStreet),
+          escapeCSVValue(order.recipientCityPostal),
+          escapeCSVValue(order.recipientCountry),
         ].join(',')
       );
     } else {
@@ -94,6 +102,10 @@ export function convertOrdersToCSV(
             index === 0 ? escapeCSVValue(promotionsStr) : '',
             escapeCSVValue(item.itemUrl),
             escapeCSVValue(order.detailsUrl),
+            index === 0 ? escapeCSVValue(order.recipientName) : '',
+            index === 0 ? escapeCSVValue(order.recipientStreet) : '',
+            index === 0 ? escapeCSVValue(order.recipientCityPostal) : '',
+            index === 0 ? escapeCSVValue(order.recipientCountry) : '',
           ].join(',')
         );
       });
