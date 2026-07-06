@@ -18,6 +18,7 @@ import {
   extractOrderIdFromUrl,
   extractPriceFromText,
   parsePrice,
+  CURRENCY_TOKEN,
   parseOrderStatus,
 } from '../utils';
 import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
@@ -900,8 +901,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
       // Try multiple price patterns - look for the item price specifically
       const pricePatterns = [
-        /(?:EUR|€)\s*([0-9]+[.,][0-9]{2})/gi,
-        /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
+        new RegExp(`${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'gi'),
+        new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}`, 'g'),
       ];
 
       for (const pattern of pricePatterns) {
@@ -959,7 +960,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
       itemsWithoutPrice.forEach((item) => {
         // Look for price near the ASIN in the document
-        const asinRegex = new RegExp(item.asin + '[^€]*(?:EUR|€)\\s*([0-9]+[.,][0-9]{2})', 'i');
+        const asinRegex = new RegExp(
+          `${item.asin}[^€£$]*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`,
+          'i'
+        );
         const match = pageText.match(asinRegex);
         if (match?.[1]) {
           const price = parsePrice(match[1]);
@@ -999,9 +1003,12 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
         // Look for savings/discount amounts
         const savingsPatterns = [
-          /(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i,
-          /-\s*(?:EUR|€)\s*([0-9]+[.,][0-9]{2})/,
-          /(?:EUR|€)\s*-\s*([0-9]+[.,][0-9]{2})/,
+          new RegExp(
+            `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
+            'i'
+          ),
+          new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`),
+          new RegExp(`${CURRENCY_TOKEN}\\s*-\\s*([0-9]+[.,][0-9]{2})`),
         ];
 
         for (const pattern of savingsPatterns) {

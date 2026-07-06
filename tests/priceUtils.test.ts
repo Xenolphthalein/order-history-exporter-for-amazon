@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrice, detectCurrency, extractPriceFromText } from '../src/utils/priceUtils';
+import {
+  parsePrice,
+  detectCurrency,
+  extractPriceFromText,
+  CURRENCY_TOKEN,
+} from '../src/utils/priceUtils';
 
 describe('parsePrice', () => {
   describe('European format', () => {
@@ -54,6 +59,32 @@ describe('parsePrice', () => {
     it('should parse simple integers', () => {
       expect(parsePrice('100')).toBe(100);
     });
+  });
+});
+
+describe('CURRENCY_TOKEN', () => {
+  const itemPricePattern = new RegExp(`${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'i');
+
+  it('should match a euro price', () => {
+    expect('€12,99'.match(itemPricePattern)?.[1]).toBe('12,99');
+  });
+
+  it('should match a pound price', () => {
+    expect('£12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
+  });
+
+  it('should match a dollar price', () => {
+    expect('$12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
+  });
+
+  it('should match currency codes', () => {
+    expect('GBP 12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
+    expect('USD 12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
+    expect('EUR 12,99'.match(itemPricePattern)?.[1]).toBe('12,99');
+  });
+
+  it('should not match a bare number', () => {
+    expect('12.99'.match(itemPricePattern)).toBeNull();
   });
 });
 

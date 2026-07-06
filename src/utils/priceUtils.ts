@@ -42,6 +42,14 @@ export function parsePrice(priceStr: string): number {
 }
 
 /**
+ * Regex source for currency tokens across all supported marketplaces.
+ * Shared so every price-scraping regex matches non-euro marketplaces
+ * (amazon.co.uk, amazon.com) instead of silently returning 0.
+ * Keep in sync with detectCurrency below.
+ */
+export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|€|£|\\$)';
+
+/**
  * Detect currency from text content
  */
 export function detectCurrency(text: string): string {
