@@ -749,7 +749,9 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         quantity: 1,
         price: 0,
         discount: 0,
-        itemUrl: `https://www.amazon.de/dp/${asin}`,
+        // Derive from the marketplace being scraped - hardcoding amazon.de
+        // produced wrong links for every other marketplace
+        itemUrl: `${window.location.origin}/dp/${asin}`,
       };
 
       // Get title
