@@ -78,8 +78,6 @@ const localeStatusConfigs: LocaleStatusConfig[] = [
       'Retur paborjat',
       'Anländer',
       'Anlander',
-      'Beställd',
-      'Bestallt',
     ],
   },
 ];

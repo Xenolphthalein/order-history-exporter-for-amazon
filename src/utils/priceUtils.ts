@@ -59,7 +59,7 @@ export function detectCurrency(text: string): string {
     return 'GBP';
   } else if (text.includes('$') || text.includes('USD')) {
     return 'USD';
-  } else if (/\bkr\b/.test(text) || text.includes('SEK')) {
+  } else if (/(?:\d[\d.,]*\s*kr|kr\s*\d[\d.,]*|SEK)/i.test(text)) {
     return 'SEK';
   }
   return 'EUR'; // Default

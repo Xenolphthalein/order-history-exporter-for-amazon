@@ -133,6 +133,10 @@ describe('detectCurrency', () => {
     expect(detectCurrency('Total: 199,00 kr')).toBe('SEK');
   });
 
+  it('should detect SEK from kr without space', () => {
+    expect(detectCurrency('199,00kr')).toBe('SEK');
+  });
+
   it('should detect SEK from SEK text', () => {
     expect(detectCurrency('Total: SEK 199,00')).toBe('SEK');
   });
