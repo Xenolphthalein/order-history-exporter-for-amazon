@@ -422,6 +422,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     const nextSelectors = [
       '.a-pagination .a-last:not(.a-disabled) a',
       'a[aria-label*="Nächste"]',
+      'a[aria-label*="Nästa"]',
       'a[aria-label*="Next"]',
       '.a-pagination li:last-child:not(.a-disabled) a',
       'a.a-last:not(.a-disabled)',
@@ -814,7 +815,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         parentEl = link.parentElement;
         for (let i = 0; i < 8 && parentEl; i++) {
           const qtyMatch = (parentEl.textContent || '').match(
-            /(?:Qty|Quantity|Menge|Anzahl)[:\s]*(\d+)/i
+            /(?:Qty|Quantity|Menge|Anzahl|Antal)[:\s]*(\d+)/i
           );
           if (qtyMatch?.[1]) {
             item.quantity = parseInt(qtyMatch[1], 10);

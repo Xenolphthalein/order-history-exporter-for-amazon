@@ -83,6 +83,14 @@ describe('CURRENCY_TOKEN', () => {
     expect('EUR 12,99'.match(itemPricePattern)?.[1]).toBe('12,99');
   });
 
+  it('should match a krona price', () => {
+    expect('kr 199,00'.match(itemPricePattern)?.[1]).toBe('199,00');
+  });
+
+  it('should match a SEK price', () => {
+    expect('SEK 199,00'.match(itemPricePattern)?.[1]).toBe('199,00');
+  });
+
   it('should not match a bare number', () => {
     expect('12.99'.match(itemPricePattern)).toBeNull();
   });
@@ -120,6 +128,18 @@ describe('detectCurrency', () => {
   it('should prioritize EUR when multiple currencies present', () => {
     expect(detectCurrency('€12.99 ($15.00)')).toBe('EUR');
   });
+
+  it('should detect SEK from kr text', () => {
+    expect(detectCurrency('Total: 199,00 kr')).toBe('SEK');
+  });
+
+  it('should detect SEK from SEK text', () => {
+    expect(detectCurrency('Total: SEK 199,00')).toBe('SEK');
+  });
+
+  it('should not match kr as a substring inside a word', () => {
+    expect(detectCurrency('Skrivbord 199,00')).toBe('EUR');
+  });
 });
 
 describe('extractPriceFromText', () => {
@@ -154,6 +174,28 @@ describe('extractPriceFromText', () => {
     it('should extract from "£ 19.99"', () => {
       const result = extractPriceFromText('Price: £ 19.99');
       expect(result).toEqual({ amount: 19.99, currency: 'GBP' });
+    });
+  });
+
+  describe('Swedish/SEK patterns', () => {
+    it('should extract from "Totalt: 199,00 kr"', () => {
+      const result = extractPriceFromText('Totalt: 199,00 kr');
+      expect(result).toEqual({ amount: 199, currency: 'SEK' });
+    });
+
+    it('should extract from "Summa: kr 299,00"', () => {
+      const result = extractPriceFromText('Summa: kr 299,00');
+      expect(result).toEqual({ amount: 299, currency: 'SEK' });
+    });
+
+    it('should extract from "Total: SEK 199,00"', () => {
+      const result = extractPriceFromText('Total: SEK 199,00');
+      expect(result).toEqual({ amount: 199, currency: 'SEK' });
+    });
+
+    it('should extract from bare "199,00 kr"', () => {
+      const result = extractPriceFromText('199,00 kr');
+      expect(result).toEqual({ amount: 199, currency: 'SEK' });
     });
   });
 

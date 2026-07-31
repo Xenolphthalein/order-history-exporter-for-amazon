@@ -59,7 +59,7 @@ export function detectCurrency(text: string): string {
     return 'GBP';
   } else if (text.includes('$') || text.includes('USD')) {
     return 'USD';
-  } else if (text.includes('kr') || text.includes('SEK')) {
+  } else if (/\bkr\b/.test(text) || text.includes('SEK')) {
     return 'SEK';
   }
   return 'EUR'; // Default
@@ -70,13 +70,15 @@ export function detectCurrency(text: string): string {
  */
 export function extractPriceFromText(text: string): { amount: number; currency: string } | null {
   const pricePatterns = [
-    /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€|\$|£|kr)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£|kr)?/gi,
+    /(?:Summe|Gesamtsumme|Gesamt|Total|Totalt|Summa)[:\s]*(?:EUR|€|\$|£|kr|SEK)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£|kr|SEK)?/gi,
     /(?:EUR|€)\s*([0-9][0-9.,]*)/gi,
     /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
     /\$\s*([0-9][0-9.,]*)/g,
     /£\s*([0-9][0-9.,]*)/g,
     /([0-9]+[.,][0-9]{2})\s*kr/gi,
     /kr\s*([0-9][0-9.,]*)/gi,
+    /([0-9]+[.,][0-9]{2})\s*SEK/gi,
+    /SEK\s*([0-9][0-9.,]*)/gi,
   ];
 
   for (const pattern of pricePatterns) {

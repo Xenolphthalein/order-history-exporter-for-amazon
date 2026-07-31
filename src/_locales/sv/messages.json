@@ -1,0 +1,246 @@
+{
+  "extensionName": {
+    "message": "Beställningsexport för Amazon",
+    "description": "The name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Exportera din Amazon-beställningshistorik som JSON- eller CSV-filer",
+    "description": "The description of the extension"
+  },
+  "popupTitle": {
+    "message": "Amazon Beställningsexport",
+    "description": "Title shown in the popup header"
+  },
+  "notAmazonWarning": {
+    "message": "Navigera till din Amazon-beställningshistorik för att använda detta tillägg.",
+    "description": "Warning shown when not on Amazon order history page"
+  },
+  "goToOrderHistory": {
+    "message": "Gå till beställningshistorik →",
+    "description": "Link text to navigate to Amazon order history"
+  },
+  "exportRange": {
+    "message": "Exportintervall",
+    "description": "Section title for export range options"
+  },
+  "exportAllOrders": {
+    "message": "Exportera alla beställningar",
+    "description": "Radio option to export all orders"
+  },
+  "selectDateRange": {
+    "message": "Välj datumintervall",
+    "description": "Radio option to select a date range"
+  },
+  "startDate": {
+    "message": "Startdatum:",
+    "description": "Label for start date input"
+  },
+  "endDate": {
+    "message": "Slutdatum:",
+    "description": "Label for end date input"
+  },
+  "exportFormat": {
+    "message": "Exportformat",
+    "description": "Section title for export format options"
+  },
+  "exportOrders": {
+    "message": "Exportera beställningar",
+    "description": "Export button text"
+  },
+  "stopExport": {
+    "message": "Stoppa export",
+    "description": "Stop button text"
+  },
+  "exporting": {
+    "message": "Exporterar...",
+    "description": "Text shown while exporting"
+  },
+  "preparingExport": {
+    "message": "Förbereder export...",
+    "description": "Initial progress text"
+  },
+  "footerText": {
+    "message": "Öppen källkod • Ingen spårning •",
+    "description": "Footer text before GitHub link"
+  },
+  "errorSelectDates": {
+    "message": "Välj både start- och slutdatum.",
+    "description": "Error when dates are not selected"
+  },
+  "errorDateOrder": {
+    "message": "Startdatum måste vara före slutdatum.",
+    "description": "Error when start date is after end date"
+  },
+  "exportStartedMessage": {
+    "message": "Startar export... Sidan navigerar genom din beställningshistorik.",
+    "description": "Progress message when export starts"
+  },
+  "exportStartedStatus": {
+    "message": "Export startad! Håll detta fönster öppet. Sidan bläddrar automatiskt genom alla år.",
+    "description": "Status message when export starts"
+  },
+  "errorGetTab": {
+    "message": "Kunde inte läsa fliken.",
+    "description": "Error when tab cannot be accessed"
+  },
+  "exportInitiatedStatus": {
+    "message": "Export initierad! Bevaka webbläsarfliken – den navigerar genom dina beställningar. Nedladdning startar automatiskt.",
+    "description": "Status message when export is initiated"
+  },
+  "exportFailedGeneric": {
+    "message": "Exporten misslyckades. Försök igen.",
+    "description": "Generic export failure message"
+  },
+  "exportFailedRefresh": {
+    "message": "Kunde inte starta exporten. Se till att du är på Amazons beställningshistoriksida och ladda om sidan.",
+    "description": "Error message when export fails to start"
+  },
+  "noYearsFound": {
+    "message": "Inga beställningsår hittades. Se till att du är på Amazons beställningshistoriksida.",
+    "description": "Alert when no years are found"
+  },
+  "resumingExport": {
+    "message": "Återupptar export...",
+    "description": "Console message when resuming export"
+  },
+  "processingYear": {
+    "message": "Bearbetar $YEAR$ (sida $PAGE$)...",
+    "description": "Progress message while processing a year",
+    "placeholders": {
+      "year": {
+        "content": "$1",
+        "example": "2024"
+      },
+      "page": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "fetchingPrices": {
+    "message": "Hämtar priser för $COUNT$ beställningar...",
+    "description": "Progress message while fetching prices",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "25"
+      }
+    }
+  },
+  "fetchingPricesProgress": {
+    "message": "Hämtar priser för beställning $CURRENT$ av $TOTAL$...",
+    "description": "Progress message for individual order price fetch",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "5"
+      },
+      "total": {
+        "content": "$2",
+        "example": "25"
+      }
+    }
+  },
+  "generatingFile": {
+    "message": "Skapar fil...",
+    "description": "Progress message while generating file"
+  },
+  "exportStopped": {
+    "message": "Export avbruten av användaren.",
+    "description": "Status message when export is stopped"
+  },
+  "exportComplete": {
+    "message": "Klar! $COUNT$ beställningar exporterade.",
+    "description": "Completion message with order count",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "150"
+      }
+    }
+  },
+  "additionalDiscount": {
+    "message": "Övrig rabatt",
+    "description": "Label for unexplained discounts"
+  },
+  "extensionInstalled": {
+    "message": "Beställningsexport för Amazon har installerats",
+    "description": "Console message on install"
+  },
+  "extensionUpdated": {
+    "message": "Beställningsexport för Amazon har uppdaterats till version",
+    "description": "Console message on update (version appended)"
+  },
+  "csvHeaderOrderId": {
+    "message": "Beställningsnummer",
+    "description": "CSV header for order ID"
+  },
+  "csvHeaderOrderDate": {
+    "message": "Beställningsdatum",
+    "description": "CSV header for order date"
+  },
+  "csvHeaderTotalAmount": {
+    "message": "Totalt belopp",
+    "description": "CSV header for total amount"
+  },
+  "csvHeaderCurrency": {
+    "message": "Valuta",
+    "description": "CSV header for currency"
+  },
+  "csvHeaderTotalSavings": {
+    "message": "Besparing",
+    "description": "CSV header for total savings"
+  },
+  "csvHeaderStatus": {
+    "message": "Status",
+    "description": "CSV header for order status"
+  },
+  "csvHeaderItemTitle": {
+    "message": "Artikel",
+    "description": "CSV header for item title"
+  },
+  "csvHeaderItemAsin": {
+    "message": "ASIN",
+    "description": "CSV header for item ASIN"
+  },
+  "csvHeaderItemQuantity": {
+    "message": "Antal",
+    "description": "CSV header for item quantity"
+  },
+  "csvHeaderItemPrice": {
+    "message": "Pris",
+    "description": "CSV header for item price"
+  },
+  "csvHeaderItemDiscount": {
+    "message": "Rabatt",
+    "description": "CSV header for item discount"
+  },
+  "csvHeaderPromotions": {
+    "message": "Erbjudanden",
+    "description": "CSV header for promotions"
+  },
+  "csvHeaderItemUrl": {
+    "message": "Artikellänk",
+    "description": "CSV header for item URL"
+  },
+  "csvHeaderDetailsUrl": {
+    "message": "Detaljlänk",
+    "description": "CSV header for details URL"
+  },
+  "csvHeaderRecipientName": {
+    "message": "Mottagarnamn",
+    "description": "CSV header for the shipping recipient's name"
+  },
+  "csvHeaderRecipientStreet": {
+    "message": "Mottagaradress",
+    "description": "CSV header for the shipping recipient's street address (may include multiple lines joined by commas)"
+  },
+  "csvHeaderRecipientCityPostal": {
+    "message": "Mottagarens stad / postnummer",
+    "description": "CSV header for the shipping recipient's city and postal code line"
+  },
+  "csvHeaderRecipientCountry": {
+    "message": "Mottagarland",
+    "description": "CSV header for the shipping recipient's country"
+  }
+}
