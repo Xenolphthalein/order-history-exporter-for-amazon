@@ -47,7 +47,7 @@ export function parsePrice(priceStr: string): number {
  * (amazon.co.uk, amazon.com) instead of silently returning 0.
  * Keep in sync with detectCurrency below.
  */
-export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|€|£|\\$)';
+export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|SEK|€|£|\\$|kr)';
 
 /**
  * Detect currency from text content
@@ -59,6 +59,8 @@ export function detectCurrency(text: string): string {
     return 'GBP';
   } else if (text.includes('$') || text.includes('USD')) {
     return 'USD';
+  } else if (text.includes('kr') || text.includes('SEK')) {
+    return 'SEK';
   }
   return 'EUR'; // Default
 }
@@ -68,11 +70,13 @@ export function detectCurrency(text: string): string {
  */
 export function extractPriceFromText(text: string): { amount: number; currency: string } | null {
   const pricePatterns = [
-    /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€|\$|£)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£)?/gi,
+    /(?:Summe|Gesamtsumme|Gesamt|Total)[:\s]*(?:EUR|€|\$|£|kr)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£|kr)?/gi,
     /(?:EUR|€)\s*([0-9][0-9.,]*)/gi,
     /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
     /\$\s*([0-9][0-9.,]*)/g,
     /£\s*([0-9][0-9.,]*)/g,
+    /([0-9]+[.,][0-9]{2})\s*kr/gi,
+    /kr\s*([0-9][0-9.,]*)/gi,
   ];
 
   for (const pattern of pricePatterns) {

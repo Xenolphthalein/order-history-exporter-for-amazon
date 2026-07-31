@@ -85,6 +85,36 @@ describe('parseDate', () => {
     });
   });
 
+  describe('Swedish date format', () => {
+    it('should parse "15 januari 2024"', () => {
+      expect(parseDate('15 januari 2024')).toBe('2024-01-15');
+    });
+
+    it('should parse "1 februari 2023"', () => {
+      expect(parseDate('1 februari 2023')).toBe('2023-02-01');
+    });
+
+    it('should parse "31 december 2022"', () => {
+      expect(parseDate('31 december 2022')).toBe('2022-12-31');
+    });
+
+    it('should parse "10 mars 2024"', () => {
+      expect(parseDate('10 mars 2024')).toBe('2024-03-10');
+    });
+
+    it('should parse Swedish date with period after day', () => {
+      expect(parseDate('15. januari 2024')).toBe('2024-01-15');
+    });
+
+    it('should handle case insensitivity', () => {
+      expect(parseDate('15. JANUARI 2024')).toBe('2024-01-15');
+    });
+
+    it('should handle extra whitespace', () => {
+      expect(parseDate('  15.  januari   2024  ')).toBe('2024-01-15');
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty string', () => {
       expect(parseDate('')).toBeNull();
@@ -173,6 +203,15 @@ describe('parseOrderDate', () => {
   it('should extract English day-first date from labeled line', () => {
     const text = 'Order #123-4567890-1234567\nOrder placed 14 February 2026\nProduct';
     expect(parseOrderDate(text)).toBe('2026-02-14');
+  });
+
+  it('should extract Swedish date from labeled line', () => {
+    const text = 'Beställningsnummer: 123-4567890-1234567\nBeställd den 15 januari 2024\nArtikel';
+    expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
+  it('should extract Swedish date from fallback chunk when no label exists', () => {
+    expect(parseOrderDate('Some text  10 mars 2024  More text')).toBe('2024-03-10');
   });
 
   it('should parse date from fallback chunk when no label exists', () => {

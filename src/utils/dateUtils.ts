@@ -50,13 +50,35 @@ const frenchMonths: Record<string, number> = {
   decembre: 12,
 };
 
-const allMonths: Record<string, number> = { ...germanMonths, ...englishMonths, ...frenchMonths };
+const swedishMonths: Record<string, number> = {
+  januari: 1,
+  februari: 2,
+  mars: 3,
+  april: 4,
+  maj: 5,
+  juni: 6,
+  juli: 7,
+  augusti: 8,
+  september: 9,
+  oktober: 10,
+  november: 11,
+  december: 12,
+};
+
+const allMonths: Record<string, number> = {
+  ...germanMonths,
+  ...englishMonths,
+  ...frenchMonths,
+  ...swedishMonths,
+};
 const germanMonthNames =
   'Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember';
 const frenchMonthNames =
   'janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre';
 const englishMonthNames =
   'January|February|March|April|May|June|July|August|September|October|November|December';
+const swedishMonthNames =
+  'januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december';
 
 const orderDatePatterns: RegExp[] = [
   new RegExp(
@@ -69,6 +91,11 @@ const orderDatePatterns: RegExp[] = [
     'iu'
   ),
   new RegExp(`\\b(\\d{1,2}(?:er)?\\s*(?:${frenchMonthNames})\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Beställd den|Beställning gjord den)\\s+(\\d{1,2}\\.?\\s*(?:${swedishMonthNames})\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}\\.?\\s*(?:${swedishMonthNames})\\s+\\d{4})\\b`, 'iu'),
   new RegExp(
     `(?:Order placed|Ordered on)\\s+((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`,
     'iu'

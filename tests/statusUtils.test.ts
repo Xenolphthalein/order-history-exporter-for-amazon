@@ -62,4 +62,43 @@ describe('parseOrderStatus', () => {
   it('should return empty string when no status exists', () => {
     expect(parseOrderStatus('Order #123-4567890-1234567 Product XYZ')).toBe('');
   });
+
+  it('should extract Swedish delivery status', () => {
+    const text = 'Beställningsnummer: 123-4567890-1234567\nLevererad den 12 mars 2024\nArtikel';
+    expect(parseOrderStatus(text)).toBe('Levererad den 12 mars 2024');
+  });
+
+  it('should extract Swedish cancellation status', () => {
+    const text = 'Avbruten den 2 februari 2024';
+    expect(parseOrderStatus(text)).toBe('Avbruten den 2 februari 2024');
+  });
+
+  it('should extract Swedish shipped status', () => {
+    const text = 'Beställningsnummer: 123-4567890-1234567\nSkickad den 5 april 2024\nArtikel';
+    expect(parseOrderStatus(text)).toBe('Skickad den 5 april 2024');
+  });
+
+  it('should extract Swedish "Retur slutförd"', () => {
+    const text = 'Beställning gjord den 7 maj 2026\nRetur slutförd\nDin retur har behandlats.';
+    expect(parseOrderStatus(text)).toBe('Retur slutförd');
+  });
+
+  it('should extract Swedish "Troligen levererad"', () => {
+    const text = 'Beställningsnr 171-5801076-8827565\nTroligen levererad den 30 april\nProdukt';
+    expect(parseOrderStatus(text)).toBe('Troligen levererad den 30 april');
+  });
+
+  it('should extract Swedish "Retur påbörjad"', () => {
+    const text =
+      'Beställning 123-4567890-1234567\nRetur påbörjad\nVi har mottagit din returförfrågan.';
+    expect(parseOrderStatus(text)).toBe('Retur påbörjad');
+  });
+
+  it('should extract Swedish unaccented status variants', () => {
+    expect(parseOrderStatus('Aterbetalad den 10 januari 2024')).toBe(
+      'Aterbetalad den 10 januari 2024'
+    );
+    expect(parseOrderStatus('Retur slutford')).toBe('Retur slutford');
+    expect(parseOrderStatus('Anlander')).toBe('Anlander');
+  });
 });
