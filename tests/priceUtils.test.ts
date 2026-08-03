@@ -170,7 +170,7 @@ describe('detectCurrency', () => {
       expect(detectCurrency('$12.99')).toBe('USD');
     });
 
-    it('should return EUR for unknown domain with $ (fallback to USD for $)', () => {
+    it('should return USD for $ on unknown domain', () => {
       expect(detectCurrency('$12.99', 'unknown.example.com')).toBe('USD');
     });
 
