@@ -1055,7 +1055,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           )
         ) {
           const amountMatch = text.match(
-            /-?\s*(?:EUR|€|\$|£|USD|GBP|SEK|kr)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€|\$|£|USD|GBP|SEK|kr)?/
+            new RegExp(`-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}?`)
           );
           if (amountMatch?.[1]) {
             const amount = parsePrice(amountMatch[1]);

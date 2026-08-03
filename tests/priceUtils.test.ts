@@ -193,6 +193,28 @@ describe('detectCurrency', () => {
       expect(detectCurrency('Total: USD 12.99', 'www.amazon.com.au')).toBe('USD');
       expect(detectCurrency('Total: USD 12.99', 'www.amazon.ca')).toBe('USD');
     });
+
+    it('should detect explicit currency symbols and codes from new marketplaces', () => {
+      // R$ / BRL
+      expect(detectCurrency('R$ 19,90')).toBe('BRL');
+      expect(detectCurrency('Total: BRL 199,99')).toBe('BRL');
+      // ¥ / JPY
+      expect(detectCurrency('¥ 1200')).toBe('JPY');
+      expect(detectCurrency('Total: JPY 5000')).toBe('JPY');
+      // ₹ / INR
+      expect(detectCurrency('₹ 499,00')).toBe('INR');
+      expect(detectCurrency('Total: INR 1499')).toBe('INR');
+      // AUD
+      expect(detectCurrency('Total: AUD 49.99')).toBe('AUD');
+      // CAD
+      expect(detectCurrency('Total: CAD 29.99')).toBe('CAD');
+      // MXN
+      expect(detectCurrency('Total: MXN 683.23')).toBe('MXN');
+    });
+
+    it('should prefer R$ over $ when both are present', () => {
+      expect(detectCurrency('R$ 19,90', 'www.amazon.com')).toBe('BRL');
+    });
   });
 });
 

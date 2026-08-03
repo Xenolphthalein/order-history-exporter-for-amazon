@@ -95,6 +95,18 @@ export function detectCurrency(text: string, hostname?: string): string {
     return 'EUR';
   } else if (text.includes('£') || text.includes('GBP')) {
     return 'GBP';
+  } else if (text.includes('R$') || text.includes('BRL')) {
+    return 'BRL';
+  } else if (text.includes('¥') || text.includes('JPY')) {
+    return 'JPY';
+  } else if (text.includes('₹') || text.includes('INR')) {
+    return 'INR';
+  } else if (text.includes('AUD')) {
+    return 'AUD';
+  } else if (text.includes('CAD')) {
+    return 'CAD';
+  } else if (text.includes('MXN')) {
+    return 'MXN';
   } else if (text.includes('USD')) {
     return 'USD';
   } else if (text.includes('$')) {
@@ -125,16 +137,17 @@ export function extractPriceFromText(
   text: string,
   hostname?: string
 ): { amount: number; currency: string } | null {
+  const CT = CURRENCY_TOKEN;
   const pricePatterns = [
-    /(?:Summe|Gesamtsumme|Gesamt|Total|Totalt|Summa)[:\s]*(?:EUR|€|\$|£|kr|SEK)?\s*([0-9][0-9.,]*)\s*(?:EUR|€|\$|£|kr|SEK)?/gi,
-    /(?:EUR|€)\s*([0-9][0-9.,]*)/gi,
-    /([0-9]+[.,][0-9]{2})\s*(?:EUR|€)/g,
-    /\$\s*([0-9][0-9.,]*)/g,
-    /£\s*([0-9][0-9.,]*)/g,
-    /([0-9]+[.,][0-9]{2})\s*kr/gi,
-    /kr\s*([0-9][0-9.,]*)/gi,
-    /([0-9]+[.,][0-9]{2})\s*SEK/gi,
-    /SEK\s*([0-9][0-9.,]*)/gi,
+    // Labeled totals with optional currency prefix/suffix (e.g. "Total: $12.99")
+    new RegExp(
+      `(?:Summe|Gesamtsumme|Gesamt|Total|Totalt|Summa)[:\\s]*${CT}?\\s*([0-9][0-9.,]*)\\s*${CT}?`,
+      'gi'
+    ),
+    // Currency-prefixed amounts (e.g. "$ 29.99", "EUR 12,99")
+    new RegExp(`${CT}\\s*([0-9][0-9.,]*)`, 'gi'),
+    // Currency-suffixed amounts (e.g. "199,00 kr", "12.99 EUR")
+    new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CT}`, 'gi'),
   ];
 
   for (const pattern of pricePatterns) {
