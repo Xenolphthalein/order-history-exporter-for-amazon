@@ -1054,7 +1054,9 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
             text
           )
         ) {
-          const amountMatch = text.match(/-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€)?/);
+          const amountMatch = text.match(
+            /-?\s*(?:EUR|€|\$|£|USD|GBP|SEK|kr)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€|\$|£|USD|GBP|SEK|kr)?/
+          );
           if (amountMatch?.[1]) {
             const amount = parsePrice(amountMatch[1]);
             if (amount > 0) {

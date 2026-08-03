@@ -186,6 +186,13 @@ describe('detectCurrency', () => {
       // £ on any domain is GBP
       expect(detectCurrency('£12.99', 'www.amazon.com.mx')).toBe('GBP');
     });
+
+    it('should return USD for explicit USD text on non-US domain', () => {
+      // "USD" is an explicit currency code and should not be overridden by domain
+      expect(detectCurrency('Total: USD 12.99', 'www.amazon.com.mx')).toBe('USD');
+      expect(detectCurrency('Total: USD 12.99', 'www.amazon.com.au')).toBe('USD');
+      expect(detectCurrency('Total: USD 12.99', 'www.amazon.ca')).toBe('USD');
+    });
   });
 });
 

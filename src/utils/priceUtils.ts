@@ -94,13 +94,15 @@ export function detectCurrency(text: string, hostname?: string): string {
     return 'EUR';
   } else if (text.includes('£') || text.includes('GBP')) {
     return 'GBP';
-  } else if (text.includes('$') || text.includes('USD')) {
+  } else if (text.includes('$')) {
     if (hostname) {
       const domainCurrency = getCurrencyForDomain(hostname);
       if (domainCurrency) {
         return domainCurrency;
       }
     }
+    return 'USD';
+  } else if (text.includes('USD')) {
     return 'USD';
   } else if (/(?:\d[\d.,]*\s*kr|kr\s*\d[\d.,]*|SEK)/i.test(text)) {
     return 'SEK';
