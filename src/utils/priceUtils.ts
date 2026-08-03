@@ -47,8 +47,13 @@ export function parsePrice(priceStr: string): number {
  * (amazon.co.uk, amazon.com, amazon.com.mx, amazon.com.au, etc.)
  * instead of silently returning 0.
  * Keep in sync with detectCurrency and DOMAIN_CURRENCY_MAP below.
+ *
+ * ISO codes are wrapped with \\b to prevent accidental substring matches
+ * inside product names/descriptions (e.g. "fraud" matching AUD).
+ * Symbols are self-delimiting and don't need word boundaries.
  */
-export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|€|£|\\$|R\\$|kr|¥|₹)';
+export const CURRENCY_TOKEN =
+  '(?:\\b(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|KR)\\b|€|£|\\$|R\\$|¥|₹)';
 
 /**
  * Map of Amazon domains to their default currencies.
