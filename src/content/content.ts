@@ -906,7 +906,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       // Try multiple price patterns - look for the item price specifically
       const pricePatterns = [
         new RegExp(`${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'gi'),
-        new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}`, 'g'),
+        new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}`, 'gi'),
       ];
 
       for (const pattern of pricePatterns) {
@@ -1011,8 +1011,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
             `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
             'i'
           ),
-          new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`),
-          new RegExp(`${CURRENCY_TOKEN}\\s*-\\s*([0-9]+[.,][0-9]{2})`),
+          new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'i'),
+          new RegExp(`${CURRENCY_TOKEN}\\s*-\\s*([0-9]+[.,][0-9]{2})`, 'i'),
         ];
 
         for (const pattern of savingsPatterns) {
@@ -1055,7 +1055,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           )
         ) {
           const amountMatch = text.match(
-            new RegExp(`-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}?`)
+            new RegExp(
+              `-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}?`,
+              'i'
+            )
           );
           if (amountMatch?.[1]) {
             const amount = parsePrice(amountMatch[1]);
