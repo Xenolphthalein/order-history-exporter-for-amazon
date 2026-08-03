@@ -115,6 +115,36 @@ describe('parseDate', () => {
     });
   });
 
+  describe('Spanish date format', () => {
+    it('should parse "27 de junio de 2026"', () => {
+      expect(parseDate('27 de junio de 2026')).toBe('2026-06-27');
+    });
+
+    it('should parse "1 de julio de 2026"', () => {
+      expect(parseDate('1 de julio de 2026')).toBe('2026-07-01');
+    });
+
+    it('should parse "15 de enero de 2024"', () => {
+      expect(parseDate('15 de enero de 2024')).toBe('2024-01-15');
+    });
+
+    it('should parse "31 de diciembre de 2022"', () => {
+      expect(parseDate('31 de diciembre de 2022')).toBe('2022-12-31');
+    });
+
+    it('should parse "10 de marzo de 2024"', () => {
+      expect(parseDate('10 de marzo de 2024')).toBe('2024-03-10');
+    });
+
+    it('should handle case insensitivity', () => {
+      expect(parseDate('27 DE JUNIO DE 2026')).toBe('2026-06-27');
+    });
+
+    it('should handle extra whitespace', () => {
+      expect(parseDate('  27  de  junio   de  2026  ')).toBe('2026-06-27');
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty string', () => {
       expect(parseDate('')).toBeNull();
@@ -216,6 +246,21 @@ describe('parseOrderDate', () => {
 
   it('should parse date from fallback chunk when no label exists', () => {
     expect(parseOrderDate('Some text  10. März 2024  More text')).toBe('2024-03-10');
+  });
+
+  it('should extract Spanish date from "Pedido realizado" label', () => {
+    const text =
+      'Número de pedido: 701-1605524-2128205\nPedido realizado\n27 de junio de 2026\nArtículo';
+    expect(parseOrderDate(text)).toBe('2026-06-27');
+  });
+
+  it('should extract Spanish date from "Suscripción cobrada el" label', () => {
+    const text = 'Suscripción cobrada el\n1 de julio de 2026\nProducto';
+    expect(parseOrderDate(text)).toBe('2026-07-01');
+  });
+
+  it('should extract Spanish date from bare fallback', () => {
+    expect(parseOrderDate('Some text  15 de marzo de 2026  More text')).toBe('2026-03-15');
   });
 
   it('should return empty string when no valid date exists', () => {

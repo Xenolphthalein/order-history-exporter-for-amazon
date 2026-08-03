@@ -80,6 +80,36 @@ const localeStatusConfigs: LocaleStatusConfig[] = [
       'Anlander',
     ],
   },
+  {
+    locale: 'es',
+    keywords: [
+      'Entregado',
+      'Entregada',
+      'Probablemente entregado',
+      'Probablemente entregada',
+      'Enviado',
+      'Enviada',
+      'En camino',
+      'Llegando',
+      'Cancelado',
+      'Cancelada',
+      'Devuelto',
+      'Devuelta',
+      'Devolución completada',
+      'Devolución finalizada',
+      'Devolucion completada',
+      'Devolucion finalizada',
+      'Devolución iniciada',
+      'Devolucion iniciada',
+      'Devolución',
+      'Devolucion',
+      'Reembolsado',
+      'Reembolsada',
+      'Reembolso',
+      'Reintegrado',
+      'Reintegrada',
+    ],
+  },
 ];
 
 const blockedStatusCandidates: RegExp[] = [/^Shipped\s+and\s+sold\b/iu];
@@ -90,7 +120,7 @@ function escapeRegex(value: string): string {
 
 const statusPatterns: RegExp[] = localeStatusConfigs.map((config) => {
   const keywords = config.keywords.map((keyword) => escapeRegex(keyword)).join('|');
-  return new RegExp(`^((?:${keywords})(?:\\s+${STATUS_TOKEN}+){0,5})`, 'iu');
+  return new RegExp(`^((?:${keywords})(?:\\s+${STATUS_TOKEN}+){0,7})`, 'iu');
 });
 
 function getStatusCandidates(orderText: string): string[] {

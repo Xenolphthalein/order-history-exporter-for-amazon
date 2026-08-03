@@ -101,4 +101,39 @@ describe('parseOrderStatus', () => {
     expect(parseOrderStatus('Retur slutford')).toBe('Retur slutford');
     expect(parseOrderStatus('Anlander')).toBe('Anlander');
   });
+
+  it('should extract Spanish delivery status', () => {
+    const text =
+      'Número de pedido: 701-1605524-2128205\nEntregado el 12 de marzo de 2026\nArtículo';
+    expect(parseOrderStatus(text)).toBe('Entregado el 12 de marzo de 2026');
+  });
+
+  it('should extract Spanish shipped status', () => {
+    const text = 'Número de pedido: 701-1605524-2128205\nEnviado el 5 de abril de 2026\nArtículo';
+    expect(parseOrderStatus(text)).toBe('Enviado el 5 de abril de 2026');
+  });
+
+  it('should extract Spanish cancellation status', () => {
+    expect(parseOrderStatus('Cancelado el 2 de febrero de 2026')).toBe(
+      'Cancelado el 2 de febrero de 2026'
+    );
+  });
+
+  it('should extract Spanish return statuses', () => {
+    expect(parseOrderStatus('Devolución completada')).toBe('Devolución completada');
+    expect(parseOrderStatus('Devolución iniciada')).toBe('Devolución iniciada');
+    expect(parseOrderStatus('Reembolsado el 10 de enero de 2026')).toBe(
+      'Reembolsado el 10 de enero de 2026'
+    );
+  });
+
+  it('should extract Spanish "En camino" (arriving) status', () => {
+    const text = 'Pedido realizado el 7 de mayo de 2026\nEn camino\nSe entregará el viernes.';
+    expect(parseOrderStatus(text)).toBe('En camino');
+  });
+
+  it('should extract Spanish unaccented status variants', () => {
+    expect(parseOrderStatus('Devolucion completada')).toBe('Devolucion completada');
+    expect(parseOrderStatus('Devolucion iniciada')).toBe('Devolucion iniciada');
+  });
 });

@@ -65,11 +65,27 @@ const swedishMonths: Record<string, number> = {
   december: 12,
 };
 
+const spanishMonths: Record<string, number> = {
+  enero: 1,
+  febrero: 2,
+  marzo: 3,
+  abril: 4,
+  mayo: 5,
+  junio: 6,
+  julio: 7,
+  agosto: 8,
+  septiembre: 9,
+  octubre: 10,
+  noviembre: 11,
+  diciembre: 12,
+};
+
 const allMonths: Record<string, number> = {
   ...germanMonths,
   ...englishMonths,
   ...frenchMonths,
   ...swedishMonths,
+  ...spanishMonths,
 };
 const germanMonthNames =
   'Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember';
@@ -79,6 +95,8 @@ const englishMonthNames =
   'January|February|March|April|May|June|July|August|September|October|November|December';
 const swedishMonthNames =
   'januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december';
+const spanishMonthNames =
+  'enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre';
 
 const orderDatePatterns: RegExp[] = [
   new RegExp(
@@ -96,6 +114,11 @@ const orderDatePatterns: RegExp[] = [
     'iu'
   ),
   new RegExp(`\\b(\\d{1,2}\\.?\\s*(?:${swedishMonthNames})\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Pedido realizado|Suscripción cobrada el|Suscripcion cobrada el)\\s+(\\d{1,2}\\s+de\\s+(?:${spanishMonthNames})\\s+de\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}\\s+de\\s+(?:${spanishMonthNames})\\s+de\\s+\\d{4})\\b`, 'iu'),
   new RegExp(
     `(?:Order placed|Ordered on)\\s+((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`,
     'iu'
@@ -137,8 +160,19 @@ export function parseDate(dateText: string): string | null {
 
   const cleanText = dateText.trim().toLowerCase();
 
+  // Handle Spanish "de" filler: "27 de junio de 2026" → "27 junio 2026"
+  // Only apply when the text contains a Spanish month name to avoid
+  // interfering with other locales' dates.
+  const spanishMonthPattern = new RegExp(`\\b(?:${spanishMonthNames})\\b`, 'iu');
+  const normalizedText = spanishMonthPattern.test(cleanText)
+    ? cleanText
+        .replace(/\bde\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    : cleanText;
+
   // Day-Month-Year: "15. Januar 2024", "15 janvier 2024", "1er février 2024"
-  const dayMonthYearMatch = cleanText.match(
+  const dayMonthYearMatch = normalizedText.match(
     /(\d{1,2})(?:er|st|nd|rd|th)?\.?\s*([\p{L}]+)\s*(\d{4})/iu
   );
   if (dayMonthYearMatch) {
@@ -153,7 +187,7 @@ export function parseDate(dateText: string): string | null {
   }
 
   // English: "January 15, 2024"
-  const englishMatch = cleanText.match(/([a-z]+)\s+(\d{1,2}),?\s*(\d{4})/i);
+  const englishMatch = normalizedText.match(/([a-z]+)\s+(\d{1,2}),?\s*(\d{4})/i);
   if (englishMatch) {
     const monthName = (englishMatch[1] || '').toLowerCase();
     const day = parseInt(englishMatch[2] || '0', 10);

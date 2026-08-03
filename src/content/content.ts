@@ -424,6 +424,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       'a[aria-label*="Nächste"]',
       'a[aria-label*="Nästa"]',
       'a[aria-label*="Next"]',
+      'a[aria-label*="Siguiente"]',
       '.a-pagination li:last-child:not(.a-disabled) a',
       'a.a-last:not(.a-disabled)',
     ];
@@ -594,8 +595,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Extract order dates from supported locales
     order.orderDate = parseOrderDate(orderText);
 
-    // Extract Total Amount
-    const priceResult = extractPriceFromText(orderText);
+    // Extract Total Amount (pass hostname for domain-aware currency detection)
+    const priceResult = extractPriceFromText(orderText, window.location.hostname);
     if (priceResult) {
       order.totalAmount = priceResult.amount;
       order.currency = priceResult.currency;
@@ -815,7 +816,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         parentEl = link.parentElement;
         for (let i = 0; i < 8 && parentEl; i++) {
           const qtyMatch = (parentEl.textContent || '').match(
-            /(?:Qty|Quantity|Menge|Anzahl|Antal)[:\s]*(\d+)/i
+            /(?:Qty|Quantity|Menge|Anzahl|Antal|Cantidad|Cant\.?)[:\s]*(\d+)/i
           );
           if (qtyMatch?.[1]) {
             item.quantity = parseInt(qtyMatch[1], 10);
@@ -1007,7 +1008,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         // Look for savings/discount amounts
         const savingsPatterns = [
           new RegExp(
-            `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
+            `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
             'i'
           ),
           new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`),
@@ -1048,7 +1049,11 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         checkedTexts.add(text);
 
         // Look for promotion lines
-        if (/Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot/i.test(text)) {
+        if (
+          /Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n/i.test(
+            text
+          )
+        ) {
           const amountMatch = text.match(/-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})\s*(?:EUR|€)?/);
           if (amountMatch?.[1]) {
             const amount = parsePrice(amountMatch[1]);
