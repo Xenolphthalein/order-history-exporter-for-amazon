@@ -283,4 +283,26 @@ describe('extractPriceFromText', () => {
       expect(result).toEqual({ amount: 252.71, currency: 'USD' });
     });
   });
+
+  describe('domain-aware price extraction', () => {
+    it('should forward hostname and return MXN for $ on amazon.com.mx', () => {
+      const result = extractPriceFromText('Total: $683.23', 'www.amazon.com.mx');
+      expect(result).toEqual({ amount: 683.23, currency: 'MXN' });
+    });
+
+    it('should forward hostname and return AUD for $ on amazon.com.au', () => {
+      const result = extractPriceFromText('Total: $49.99', 'www.amazon.com.au');
+      expect(result).toEqual({ amount: 49.99, currency: 'AUD' });
+    });
+
+    it('should forward hostname and return CAD for $ on amazon.ca', () => {
+      const result = extractPriceFromText('Total: $29.99', 'www.amazon.ca');
+      expect(result).toEqual({ amount: 29.99, currency: 'CAD' });
+    });
+
+    it('should use domain default when no currency symbol present', () => {
+      const result = extractPriceFromText('Total: 683.23', 'www.amazon.com.mx');
+      expect(result).toEqual({ amount: 683.23, currency: 'MXN' });
+    });
+  });
 });

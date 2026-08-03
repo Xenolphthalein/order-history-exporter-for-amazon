@@ -44,10 +44,11 @@ export function parsePrice(priceStr: string): number {
 /**
  * Regex source for currency tokens across all supported marketplaces.
  * Shared so every price-scraping regex matches non-euro marketplaces
- * (amazon.co.uk, amazon.com) instead of silently returning 0.
- * Keep in sync with detectCurrency below.
+ * (amazon.co.uk, amazon.com, amazon.com.mx, amazon.com.au, etc.)
+ * instead of silently returning 0.
+ * Keep in sync with detectCurrency and DOMAIN_CURRENCY_MAP below.
  */
-export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|SEK|€|£|\\$|kr)';
+export const CURRENCY_TOKEN = '(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|€|£|\\$|R\\$|kr|¥|₹)';
 
 /**
  * Map of Amazon domains to their default currencies.
@@ -94,6 +95,8 @@ export function detectCurrency(text: string, hostname?: string): string {
     return 'EUR';
   } else if (text.includes('£') || text.includes('GBP')) {
     return 'GBP';
+  } else if (text.includes('USD')) {
+    return 'USD';
   } else if (text.includes('$')) {
     if (hostname) {
       const domainCurrency = getCurrencyForDomain(hostname);
@@ -101,8 +104,6 @@ export function detectCurrency(text: string, hostname?: string): string {
         return domainCurrency;
       }
     }
-    return 'USD';
-  } else if (text.includes('USD')) {
     return 'USD';
   } else if (/(?:\d[\d.,]*\s*kr|kr\s*\d[\d.,]*|SEK)/i.test(text)) {
     return 'SEK';
