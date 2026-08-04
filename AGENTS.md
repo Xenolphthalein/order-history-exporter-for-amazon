@@ -18,6 +18,7 @@ It combines project-specific workflows with general engineering guardrails.
 - `src/background/background.ts`: download handling and runtime message bridge.
 - `src/content/content.ts`: scraping/export orchestration across Amazon order pages.
 - `src/popup/*`: popup UI (HTML/CSS/TS) and user interaction.
+- `src/constants.ts`: shared export-state and cancellation storage keys.
 - `src/utils/*.ts`: parsing, URL, date, CSV, and order utility logic.
 - `src/types/index.ts`: shared data contracts for export flow and messages.
 - `src/manifest.firefox.json`: Firefox MV2 manifest.
@@ -41,8 +42,8 @@ It combines project-specific workflows with general engineering guardrails.
 ## Core Architecture Rules
 
 1. Keep responsibilities separated:
-   - Popup handles UX only.
-   - Content script handles scraping/export state.
+   - Popup handles UX and sends start/stop commands.
+   - Content script handles scraping, export state, cancellation, and auto-resume across order pages.
    - Background handles downloads and message fan-out.
 2. Reuse `src/utils` and `src/types` instead of duplicating logic in scripts.
 3. Preserve cross-browser behavior:
@@ -54,6 +55,9 @@ It combines project-specific workflows with general engineering guardrails.
    - JSON/CSV generation paths
    - tests
    - README export schema docs
+6. Preserve cancellation across page navigation:
+   - Keep storage keys centralized in `src/constants.ts`.
+   - Keep the `storage` permission in both manifests while `browser.storage.session` is used.
 
 ## Coding Conventions
 
@@ -79,6 +83,7 @@ Add or update tests for behavior changes, bug fixes, or non-trivial refactors.
 - `src/utils/priceUtils.ts` -> `tests/priceUtils.test.ts`
 - `src/utils/orderUtils.ts` -> `tests/orderUtils.test.ts`
 - `src/utils/csvUtils.ts` -> `tests/csvUtils.test.ts`
+- `src/utils/statusUtils.ts` -> `tests/statusUtils.test.ts`
 - `src/utils/urlUtils.ts` -> `tests/urlUtils.test.ts`
 
 Test rules:

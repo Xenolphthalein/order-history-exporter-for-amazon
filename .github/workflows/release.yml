@@ -1,5 +1,10 @@
 name: Release
 
+# Store publishing requires the following repository secrets:
+# Chrome: CHROME_EXTENSION_ID, CHROME_PUBLISHER_ID, CHROME_CLIENT_ID,
+#         CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN
+# Firefox: FIREFOX_ADDON_ID, FIREFOX_API_KEY, FIREFOX_API_SECRET
+
 on:
   push:
     tags:

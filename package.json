@@ -33,7 +33,7 @@
     "chrome"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "Unlicense",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/webextension-polyfill": "^0.12.5",
