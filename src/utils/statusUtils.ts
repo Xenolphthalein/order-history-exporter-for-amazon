@@ -110,6 +110,29 @@ const localeStatusConfigs: LocaleStatusConfig[] = [
       'Reintegrada',
     ],
   },
+  {
+    locale: 'it',
+    keywords: [
+      'Consegnato',
+      'Consegnata',
+      'Ritirato',
+      'Ritirata',
+      'Probabile consegna',
+      'Consegna prevista',
+      'In arrivo',
+      'Spedito',
+      'Spedita',
+      'Annullato',
+      'Annullata',
+      'Reso completato',
+      'Reso avviato',
+      'Restituito',
+      'Restituita',
+      'Rimborsato',
+      'Rimborsata',
+      'Rimborso',
+    ],
+  },
 ];
 
 const blockedStatusCandidates: RegExp[] = [/^Shipped\s+and\s+sold\b/iu];

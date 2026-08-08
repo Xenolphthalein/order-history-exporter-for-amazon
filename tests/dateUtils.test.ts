@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseDate,
   parseOrderDate,
+  parseOrderDateFromRows,
   extractOrderYear,
   filterYearsByDateRange,
 } from '../src/utils/dateUtils';
@@ -145,6 +146,32 @@ describe('parseDate', () => {
     });
   });
 
+  describe('Italian date format', () => {
+    it('should parse "15 gennaio 2024"', () => {
+      expect(parseDate('15 gennaio 2024')).toBe('2024-01-15');
+    });
+
+    it('should parse "1 febbraio 2023"', () => {
+      expect(parseDate('1 febbraio 2023')).toBe('2023-02-01');
+    });
+
+    it('should parse "31 dicembre 2022"', () => {
+      expect(parseDate('31 dicembre 2022')).toBe('2022-12-31');
+    });
+
+    it('should parse "10 marzo 2024"', () => {
+      expect(parseDate('10 marzo 2024')).toBe('2024-03-10');
+    });
+
+    it('should handle case insensitivity', () => {
+      expect(parseDate('15 GENNAIO 2024')).toBe('2024-01-15');
+    });
+
+    it('should handle extra whitespace', () => {
+      expect(parseDate('  15   gennaio   2024  ')).toBe('2024-01-15');
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty string', () => {
       expect(parseDate('')).toBeNull();
@@ -263,8 +290,45 @@ describe('parseOrderDate', () => {
     expect(parseOrderDate('Some text  15 de marzo de 2026  More text')).toBe('2026-03-15');
   });
 
+  it('should extract Italian date from "Ordine effettuato il" label', () => {
+    const text = 'Numero ordine: 123-4567890-1234567\nOrdine effettuato il 15 gennaio 2024\nArticolo';
+    expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
+  it('should extract Italian date from bare fallback (label and date on separate lines)', () => {
+    const text = 'ORDINE EFFETTUATO\n15 gennaio 2024\nTOTALE\n12,99 €';
+    expect(parseOrderDate(text)).toBe('2024-01-15');
+  });
+
   it('should return empty string when no valid date exists', () => {
     expect(parseOrderDate('Order #123-4567890-1234567 Product XYZ')).toBe('');
+  });
+});
+
+describe('parseOrderDateFromRows', () => {
+  it('should extract the date from the matching row regardless of label wording', () => {
+    const rows = [
+      { label: 'Ordine effettuato il:', value: '15 gennaio 2024' },
+      { label: 'Totale', value: '12,99 €' },
+    ];
+    expect(parseOrderDateFromRows(rows)).toBe('2024-01-15');
+  });
+
+  it('should skip rows whose value is not a date and use the first one that is', () => {
+    const rows = [
+      { label: 'Totale', value: '12,99 €' },
+      { label: 'Ordine effettuato il:', value: '15 gennaio 2024' },
+    ];
+    expect(parseOrderDateFromRows(rows)).toBe('2024-01-15');
+  });
+
+  it('should return empty string when no row contains a valid date', () => {
+    const rows = [{ label: 'Totale', value: '12,99 €' }];
+    expect(parseOrderDateFromRows(rows)).toBe('');
+  });
+
+  it('should return empty string for an empty row list', () => {
+    expect(parseOrderDateFromRows([])).toBe('');
   });
 });
 

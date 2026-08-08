@@ -7,6 +7,7 @@ import browser from 'webextension-polyfill';
 import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
 import {
   parseOrderDate,
+  parseOrderDateFromRows,
   extractOrderYear,
   filterYearsByDateRange,
   buildOrderPageUrl,
@@ -17,6 +18,8 @@ import {
   extractOrderId,
   extractOrderIdFromUrl,
   extractPriceFromText,
+  extractTotalFromRows,
+  summarizePaymentRows,
   parsePrice,
   CURRENCY_TOKEN,
   parseOrderStatus,
@@ -544,6 +547,29 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   }
 
   /**
+   * Extract label/value pairs from the order header
+   * (`.order-header__header-list-item`): a caption row (e.g. "Totale",
+   * "Ordine effettuato il:") followed by a value row (e.g. "13,99 €").
+   * Scoped to direct-child `.a-row`s only, since some items (e.g. the
+   * recipient column) nest additional `.a-row`s inside their value that
+   * aren't part of this label/value pair.
+   */
+  function getOrderHeaderRows(orderEl: Element): { label: string; value: string }[] {
+    const rows: { label: string; value: string }[] = [];
+    const items = orderEl.querySelectorAll('.order-header__header-list-item');
+    items.forEach((item) => {
+      const rowEls = item.querySelectorAll(':scope > .a-row');
+      if (rowEls.length >= 2) {
+        rows.push({
+          label: (rowEls[0]?.textContent || '').replace(/\s+/g, ' ').trim(),
+          value: (rowEls[1]?.textContent || '').replace(/\s+/g, ' ').trim(),
+        });
+      }
+    });
+    return rows;
+  }
+
+  /**
    * Parse a single order element
    */
   function parseOrderElement(orderEl: Element): Order | null {
@@ -561,6 +587,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       recipientStreet: '',
       recipientCityPostal: '',
       recipientCountry: '',
+      chargedAmount: null,
+      giftCardAmount: 0,
     };
 
     const orderText = getOrderCardText(orderEl);
@@ -592,11 +620,19 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       }
     }
 
-    // Extract order dates from supported locales
-    order.orderDate = parseOrderDate(orderText);
+    // Extract date and total from the order header's label/value rows first
+    // (locale-independent structure) — this avoids scanning the whole card's
+    // text (items, address, etc.) where an unrelated number could be
+    // mistaken for the date or total. Fall back to the whole-text scan for
+    // layouts where the header structure isn't found.
+    const headerRows = getOrderHeaderRows(orderEl);
+
+    order.orderDate = parseOrderDateFromRows(headerRows) || parseOrderDate(orderText);
 
     // Extract Total Amount (pass hostname for domain-aware currency detection)
-    const priceResult = extractPriceFromText(orderText, window.location.hostname);
+    const priceResult =
+      extractTotalFromRows(headerRows, window.location.hostname) ||
+      extractPriceFromText(orderText, window.location.hostname);
     if (priceResult) {
       order.totalAmount = priceResult.amount;
       order.currency = priceResult.currency;
@@ -871,6 +907,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
         parseItemPricesFromDetails(order, doc);
         parsePromotionsFromDetails(order, doc);
+        parsePaymentSummaryFromDetails(order, doc);
 
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
@@ -1099,6 +1136,33 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         `[Amazon Exporter] Order ${order.orderId} has ${promotions.length} promotions, total savings: €${totalSavings}`
       );
     }
+  }
+
+  /**
+   * Parse the "charge summary" from the order-details page
+   * (`[data-component="chargeSummary"]`): the line-item list showing item
+   * subtotal, shipping, tax, running total, and — when a gift card was
+   * used — a deduction row followed by the final total actually charged.
+   * Sets `order.chargedAmount` and `order.giftCardAmount`.
+   */
+  function parsePaymentSummaryFromDetails(order: Order, doc: Document): void {
+    const chargeSummary = doc.querySelector('[data-component="chargeSummary"]');
+    if (!chargeSummary) return;
+
+    const rows: { label: string; amount: number }[] = [];
+    chargeSummary.querySelectorAll('li').forEach((li) => {
+      const labelEl = li.querySelector('.od-line-item-row-label');
+      const valueEl = li.querySelector('.od-line-item-row-content');
+      const label = (labelEl?.textContent || '').replace(/\s+/g, ' ').trim();
+      const valueText = (valueEl?.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!label || !valueText) return;
+      const amount = parsePrice(valueText.replace(/[€$£]/g, '').trim());
+      rows.push({ label, amount });
+    });
+
+    const { chargedAmount, giftCardAmount } = summarizePaymentRows(rows);
+    order.chargedAmount = chargedAmount;
+    order.giftCardAmount = giftCardAmount;
   }
 
   /**

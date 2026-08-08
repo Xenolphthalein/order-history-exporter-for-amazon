@@ -25,6 +25,11 @@ export interface Order {
   recipientStreet: string;
   recipientCityPostal: string;
   recipientCountry: string;
+  /** Amount actually charged to a real payment method (card/bank) after any
+   * gift-card deduction. Null until the order-details page has been parsed. */
+  chargedAmount: number | null;
+  /** Amount covered by a gift card, 0 if none was used. */
+  giftCardAmount: number;
 }
 
 export interface Promotion {

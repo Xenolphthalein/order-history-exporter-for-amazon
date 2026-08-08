@@ -1,0 +1,246 @@
+{
+  "extensionName": {
+    "message": "Esportatore cronologia ordini per Amazon",
+    "description": "The name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Esporta la cronologia dei tuoi ordini Amazon in file JSON o CSV",
+    "description": "The description of the extension"
+  },
+  "popupTitle": {
+    "message": "Esportatore ordini Amazon",
+    "description": "Title shown in the popup header"
+  },
+  "notAmazonWarning": {
+    "message": "Vai alla pagina della cronologia ordini di Amazon per usare questa estensione.",
+    "description": "Warning shown when not on Amazon order history page"
+  },
+  "goToOrderHistory": {
+    "message": "Vai alla cronologia ordini →",
+    "description": "Link text to navigate to Amazon order history"
+  },
+  "exportRange": {
+    "message": "Intervallo di esportazione",
+    "description": "Section title for export range options"
+  },
+  "exportAllOrders": {
+    "message": "Esporta tutti gli ordini",
+    "description": "Radio option to export all orders"
+  },
+  "selectDateRange": {
+    "message": "Seleziona intervallo di date",
+    "description": "Radio option to select a date range"
+  },
+  "startDate": {
+    "message": "Data di inizio:",
+    "description": "Label for start date input"
+  },
+  "endDate": {
+    "message": "Data di fine:",
+    "description": "Label for end date input"
+  },
+  "exportFormat": {
+    "message": "Formato di esportazione",
+    "description": "Section title for export format options"
+  },
+  "exportOrders": {
+    "message": "Esporta ordini",
+    "description": "Export button text"
+  },
+  "stopExport": {
+    "message": "Interrompi esportazione",
+    "description": "Stop button text"
+  },
+  "exporting": {
+    "message": "Esportazione in corso...",
+    "description": "Text shown while exporting"
+  },
+  "preparingExport": {
+    "message": "Preparazione esportazione...",
+    "description": "Initial progress text"
+  },
+  "footerText": {
+    "message": "Open source • Nessun tracciamento •",
+    "description": "Footer text before GitHub link"
+  },
+  "errorSelectDates": {
+    "message": "Seleziona sia la data di inizio che quella di fine.",
+    "description": "Error when dates are not selected"
+  },
+  "errorDateOrder": {
+    "message": "La data di inizio deve essere precedente alla data di fine.",
+    "description": "Error when start date is after end date"
+  },
+  "exportStartedMessage": {
+    "message": "Avvio esportazione... La pagina navigherà nella cronologia dei tuoi ordini.",
+    "description": "Progress message when export starts"
+  },
+  "exportStartedStatus": {
+    "message": "Esportazione avviata! Tieni aperto questo popup o controlla la scheda del browser. La pagina navigherà automaticamente tra gli anni.",
+    "description": "Status message when export starts"
+  },
+  "errorGetTab": {
+    "message": "Impossibile ottenere la scheda corrente.",
+    "description": "Error when tab cannot be accessed"
+  },
+  "exportInitiatedStatus": {
+    "message": "Esportazione avviata! Osserva la scheda del browser: navigherà tra i tuoi ordini. Il file verrà scaricato al termine.",
+    "description": "Status message when export is initiated"
+  },
+  "exportFailedGeneric": {
+    "message": "Esportazione non riuscita. Riprova.",
+    "description": "Generic export failure message"
+  },
+  "exportFailedRefresh": {
+    "message": "Impossibile avviare l'esportazione. Assicurati di essere sulla pagina della cronologia ordini di Amazon e aggiorna la pagina.",
+    "description": "Error message when export fails to start"
+  },
+  "noYearsFound": {
+    "message": "Nessun anno trovato da esportare. Assicurati di essere sulla pagina della cronologia ordini di Amazon.",
+    "description": "Alert when no years are found"
+  },
+  "resumingExport": {
+    "message": "Ripresa esportazione...",
+    "description": "Console message when resuming export"
+  },
+  "processingYear": {
+    "message": "Elaborazione $YEAR$ (pagina $PAGE$)...",
+    "description": "Progress message while processing a year",
+    "placeholders": {
+      "year": {
+        "content": "$1",
+        "example": "2024"
+      },
+      "page": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "fetchingPrices": {
+    "message": "Recupero prezzi degli articoli per $COUNT$ ordini...",
+    "description": "Progress message while fetching prices",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "25"
+      }
+    }
+  },
+  "fetchingPricesProgress": {
+    "message": "Recupero prezzi per l'ordine $CURRENT$/$TOTAL$...",
+    "description": "Progress message for individual order price fetch",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "5"
+      },
+      "total": {
+        "content": "$2",
+        "example": "25"
+      }
+    }
+  },
+  "generatingFile": {
+    "message": "Generazione file...",
+    "description": "Progress message while generating file"
+  },
+  "exportStopped": {
+    "message": "Esportazione interrotta dall'utente.",
+    "description": "Status message when export is stopped"
+  },
+  "exportComplete": {
+    "message": "Esportazione completata! $COUNT$ ordini esportati.",
+    "description": "Completion message with order count",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "150"
+      }
+    }
+  },
+  "additionalDiscount": {
+    "message": "Sconto aggiuntivo",
+    "description": "Label for unexplained discounts"
+  },
+  "extensionInstalled": {
+    "message": "Esportatore cronologia ordini per Amazon installato",
+    "description": "Console message on install"
+  },
+  "extensionUpdated": {
+    "message": "Esportatore cronologia ordini per Amazon aggiornato alla versione",
+    "description": "Console message on update (version appended)"
+  },
+  "csvHeaderOrderId": {
+    "message": "ID ordine",
+    "description": "CSV header for order ID"
+  },
+  "csvHeaderOrderDate": {
+    "message": "Data ordine",
+    "description": "CSV header for order date"
+  },
+  "csvHeaderTotalAmount": {
+    "message": "Importo totale",
+    "description": "CSV header for total amount"
+  },
+  "csvHeaderCurrency": {
+    "message": "Valuta",
+    "description": "CSV header for currency"
+  },
+  "csvHeaderTotalSavings": {
+    "message": "Risparmio totale",
+    "description": "CSV header for total savings"
+  },
+  "csvHeaderStatus": {
+    "message": "Stato",
+    "description": "CSV header for order status"
+  },
+  "csvHeaderItemTitle": {
+    "message": "Titolo articolo",
+    "description": "CSV header for item title"
+  },
+  "csvHeaderItemAsin": {
+    "message": "ASIN articolo",
+    "description": "CSV header for item ASIN"
+  },
+  "csvHeaderItemQuantity": {
+    "message": "Quantità articolo",
+    "description": "CSV header for item quantity"
+  },
+  "csvHeaderItemPrice": {
+    "message": "Prezzo articolo",
+    "description": "CSV header for item price"
+  },
+  "csvHeaderItemDiscount": {
+    "message": "Sconto articolo",
+    "description": "CSV header for item discount"
+  },
+  "csvHeaderPromotions": {
+    "message": "Promozioni",
+    "description": "CSV header for promotions"
+  },
+  "csvHeaderItemUrl": {
+    "message": "URL articolo",
+    "description": "CSV header for item URL"
+  },
+  "csvHeaderDetailsUrl": {
+    "message": "URL dettagli",
+    "description": "CSV header for details URL"
+  },
+  "csvHeaderRecipientName": {
+    "message": "Nome destinatario",
+    "description": "CSV header for the shipping recipient's name"
+  },
+  "csvHeaderRecipientStreet": {
+    "message": "Via destinatario",
+    "description": "CSV header for the shipping recipient's street address (may include multiple lines joined by commas)"
+  },
+  "csvHeaderRecipientCityPostal": {
+    "message": "Città / CAP destinatario",
+    "description": "CSV header for the shipping recipient's city and postal code line"
+  },
+  "csvHeaderRecipientCountry": {
+    "message": "Paese destinatario",
+    "description": "CSV header for the shipping recipient's country"
+  }
+}

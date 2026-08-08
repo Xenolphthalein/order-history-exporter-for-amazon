@@ -3,6 +3,8 @@ import {
   parsePrice,
   detectCurrency,
   extractPriceFromText,
+  extractTotalFromRows,
+  summarizePaymentRows,
   CURRENCY_TOKEN,
 } from '../src/utils/priceUtils';
 
@@ -275,6 +277,29 @@ describe('extractPriceFromText', () => {
     });
   });
 
+  describe('Italian patterns', () => {
+    it('should extract from "Totale: 45,00 €"', () => {
+      const result = extractPriceFromText('Totale: 45,00 €');
+      expect(result).toEqual({ amount: 45, currency: 'EUR' });
+    });
+
+    it('should extract from "TOTALE 45,00 €" (uppercase, no colon)', () => {
+      const result = extractPriceFromText('TOTALE 45,00 €');
+      expect(result).toEqual({ amount: 45, currency: 'EUR' });
+    });
+
+    it('should prefer the labeled "Totale" over an earlier unrelated price in the same order card text', () => {
+      // Regression test: before "Totale" was added to the labeled-total
+      // pattern, it was never recognized, so extraction fell through to the
+      // first €-adjacent number anywhere in the (unrelated-text-heavy) order
+      // card, e.g. an item's own price, instead of the real order total.
+      const text =
+        'Ordine n. 123-4567890-1234567 Articolo: Prodotto XYZ € 12,99 Quantità: 1 TOTALE 45,00 €';
+      const result = extractPriceFromText(text);
+      expect(result).toEqual({ amount: 45, currency: 'EUR' });
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null when no price found', () => {
       expect(extractPriceFromText('No price here')).toBeNull();
@@ -326,5 +351,135 @@ describe('extractPriceFromText', () => {
       const result = extractPriceFromText('Total: 683.23', 'www.amazon.com.mx');
       expect(result).toEqual({ amount: 683.23, currency: 'MXN' });
     });
+  });
+});
+
+describe('extractTotalFromRows', () => {
+  it('should extract from a row labeled "Totale"', () => {
+    const rows = [{ label: 'Totale', value: '45,00 €' }];
+    expect(extractTotalFromRows(rows)).toEqual({ amount: 45, currency: 'EUR' });
+  });
+
+  it('should extract from a row labeled "Total"', () => {
+    const rows = [{ label: 'Total', value: '$29.99' }];
+    expect(extractTotalFromRows(rows)).toEqual({ amount: 29.99, currency: 'USD' });
+  });
+
+  it('should ignore rows whose label is not a total label', () => {
+    const rows = [{ label: 'Ordine effettuato il:', value: '15 gennaio 2024' }];
+    expect(extractTotalFromRows(rows)).toBeNull();
+  });
+
+  it('should return null when no row matches', () => {
+    expect(extractTotalFromRows([])).toBeNull();
+  });
+
+  it('should not be fooled by a postal code in another row', () => {
+    // Regression: the shipping-address row can contain a number (a postal
+    // code) that a whole-card-text scan previously grabbed as the total
+    // when the "Totale" label wasn't recognized. Row-scoped extraction
+    // must only look at the row actually labeled as the total.
+    const rows = [
+      { label: 'Ordine effettuato il:', value: '15 gennaio 2024' },
+      { label: 'Totale', value: '45,00 €' },
+      { label: 'Invia a', value: 'Mario Rossi, Via Roma 1, City, XX 00100 Italia' },
+    ];
+    expect(extractTotalFromRows(rows, 'www.amazon.it')).toEqual({
+      amount: 45,
+      currency: 'EUR',
+    });
+  });
+});
+
+describe('summarizePaymentRows', () => {
+  it('should return chargedAmount 0 and the full giftCardAmount for an order fully covered by a gift card', () => {
+    const rows = [
+      { label: 'Subtotale articoli:', amount: 32.0 },
+      { label: 'Costi di spedizione:', amount: 0 },
+      { label: 'Totale IVA esclusa:', amount: 32.0 },
+      { label: 'IVA:', amount: 8.0 },
+      { label: 'Totale:', amount: 40.0 },
+      { label: 'Importo Buono Regalo:', amount: -40.0 },
+      { label: 'Totale:', amount: 0 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 0, giftCardAmount: 40 });
+  });
+
+  it('should return chargedAmount equal to the total and giftCardAmount 0 for a card-only order', () => {
+    const rows = [
+      { label: 'Subtotale articoli:', amount: 32.0 },
+      { label: 'Costi di spedizione:', amount: 0 },
+      { label: 'Totale IVA esclusa:', amount: 32.0 },
+      { label: 'IVA:', amount: 8.0 },
+      { label: 'Totale:', amount: 40.0 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 40, giftCardAmount: 0 });
+  });
+
+  it('should handle a mixed gift-card + card order (partial coverage)', () => {
+    const rows = [
+      { label: 'Totale:', amount: 40 },
+      { label: 'Importo Buono Regalo:', amount: -15 },
+      { label: 'Totale:', amount: 25 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 25, giftCardAmount: 15 });
+  });
+
+  it('should recognize gift-card labels across supported locales', () => {
+    const cases = [
+      'Gift Card Amount:',
+      'Geschenkgutschein-Betrag:',
+      'Montant du chèque-cadeau:',
+      'Montant de la carte-cadeau:',
+      'Presentkortsbelopp:',
+      'Importe de la tarjeta de regalo:',
+      'Importe del cheque regalo:',
+      'Importo Buono Regalo:',
+    ];
+    for (const label of cases) {
+      const rows = [
+        { label: 'Totale:', amount: 10 },
+        { label, amount: -10 },
+        { label: 'Totale:', amount: 0 },
+      ];
+      expect(summarizePaymentRows(rows).giftCardAmount).toBe(10);
+    }
+  });
+
+  it('should not mistake a generic discount/coupon row for a gift card', () => {
+    const rows = [
+      { label: 'Totale:', amount: 20 },
+      { label: 'Sconto Coupon:', amount: -5 },
+      { label: 'Totale:', amount: 15 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 15, giftCardAmount: 0 });
+  });
+
+  it('should not mistake a purchased gift card (product, positive amount) for a gift-card payment', () => {
+    // Real-world case: buying an Amazon gift card itself as a product, paid
+    // normally (e.g. by card). The label matches "Buono Regalo" but the
+    // amount is positive — a real payment deduction is always negative.
+    const rows = [{ label: 'Buono Regalo:', amount: 25 }];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 25, giftCardAmount: 0 });
+  });
+
+  it('should ignore a trailing "Totale rimborso" row for a returned order', () => {
+    // Real-world case: order fully paid with a gift card, then returned.
+    // Amazon appends a refund-total row after the normal summary — it must
+    // not be mistaken for the charged amount (it isn't the last *charge*
+    // row, it's a refund confirmation).
+    const rows = [
+      { label: 'Subtotale articoli:', amount: 18.0 },
+      { label: 'Costi di spedizione:', amount: 0 },
+      { label: 'Totale:', amount: 18.0 },
+      { label: 'Importo Buono Regalo:', amount: -18.0 },
+      { label: 'Totale:', amount: 0 },
+      { label: 'Totale rimborso', amount: 18.0 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 0, giftCardAmount: 18 });
+  });
+
+  it('should return null chargedAmount for an empty row list (order-details not fetched)', () => {
+    expect(summarizePaymentRows([])).toEqual({ chargedAmount: null, giftCardAmount: 0 });
   });
 });

@@ -80,12 +80,28 @@ const spanishMonths: Record<string, number> = {
   diciembre: 12,
 };
 
+const italianMonths: Record<string, number> = {
+  gennaio: 1,
+  febbraio: 2,
+  marzo: 3,
+  aprile: 4,
+  maggio: 5,
+  giugno: 6,
+  luglio: 7,
+  agosto: 8,
+  settembre: 9,
+  ottobre: 10,
+  novembre: 11,
+  dicembre: 12,
+};
+
 const allMonths: Record<string, number> = {
   ...germanMonths,
   ...englishMonths,
   ...frenchMonths,
   ...swedishMonths,
   ...spanishMonths,
+  ...italianMonths,
 };
 const germanMonthNames =
   'Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember';
@@ -97,6 +113,8 @@ const swedishMonthNames =
   'januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december';
 const spanishMonthNames =
   'enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre';
+const italianMonthNames =
+  'gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre';
 
 const orderDatePatterns: RegExp[] = [
   new RegExp(
@@ -119,6 +137,11 @@ const orderDatePatterns: RegExp[] = [
     'iu'
   ),
   new RegExp(`\\b(\\d{1,2}\\s+de\\s+(?:${spanishMonthNames})\\s+de\\s+\\d{4})\\b`, 'iu'),
+  new RegExp(
+    `(?:Ordine effettuato il|Ordine effettuato)\\s+(\\d{1,2}\\s*(?:${italianMonthNames})\\s+\\d{4})\\b`,
+    'iu'
+  ),
+  new RegExp(`\\b(\\d{1,2}\\s*(?:${italianMonthNames})\\s+\\d{4})\\b`, 'iu'),
   new RegExp(
     `(?:Order placed|Ordered on)\\s+((?:${englishMonthNames})\\s+\\d{1,2},?\\s+\\d{4})\\b`,
     'iu'
@@ -223,6 +246,23 @@ export function parseOrderDate(orderText: string): string {
     }
   }
 
+  return '';
+}
+
+/**
+ * Extract the order date from label/value row pairs scraped from the order
+ * header (Amazon's order-history page structure: a caption like "Ordine
+ * effettuato il:" followed by a value like "22 luglio 2026", as two sibling
+ * elements). Doesn't require matching the label text — a row's value is
+ * tried directly against `parseDate`, since a valid date is self-identifying
+ * across all supported locales and this avoids needing an exhaustive
+ * per-locale label list here too.
+ */
+export function parseOrderDateFromRows(rows: { label: string; value: string }[]): string {
+  for (const row of rows) {
+    const parsed = parseDate(row.value);
+    if (parsed) return parsed;
+  }
   return '';
 }
 

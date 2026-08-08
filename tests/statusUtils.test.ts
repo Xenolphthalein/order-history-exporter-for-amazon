@@ -136,4 +136,38 @@ describe('parseOrderStatus', () => {
     expect(parseOrderStatus('Devolucion completada')).toBe('Devolucion completada');
     expect(parseOrderStatus('Devolucion iniciada')).toBe('Devolucion iniciada');
   });
+
+  it('should extract Italian delivery status (verified against real amazon.it order-card wording)', () => {
+    const text = 'Ordine n. 123-4567890-1234567\nConsegnato 12 marzo\nArticolo';
+    expect(parseOrderStatus(text)).toBe('Consegnato 12 marzo');
+  });
+
+  it('should extract Italian pickup-point status (Amazon Locker)', () => {
+    // "Ritirato" — Amazon Locker pickup uses a different status word than
+    // home delivery ("Consegnato"); verified against a real order card.
+    const text = 'Ordine # 123-4567890-1234567\nRitirato 12 marzo\nArticolo';
+    expect(parseOrderStatus(text)).toBe('Ritirato 12 marzo');
+  });
+
+  it('should extract Italian shipped status', () => {
+    const text = 'Numero ordine: 123-4567890-1234567\nSpedito il 5 aprile 2024\nArticolo';
+    expect(parseOrderStatus(text)).toBe('Spedito il 5 aprile 2024');
+  });
+
+  it('should extract Italian cancellation status', () => {
+    expect(parseOrderStatus('Annullato il 2 febbraio 2024')).toBe('Annullato il 2 febbraio 2024');
+  });
+
+  it('should extract Italian return/refund statuses', () => {
+    expect(parseOrderStatus('Reso completato')).toBe('Reso completato');
+    expect(parseOrderStatus('Reso avviato')).toBe('Reso avviato');
+    expect(parseOrderStatus('Rimborsato il 10 gennaio 2024')).toBe(
+      'Rimborsato il 10 gennaio 2024'
+    );
+  });
+
+  it('should extract Italian "In arrivo" status', () => {
+    const text = 'Ordine effettuato il 7 maggio 2026\nIn arrivo\nConsegna prevista venerdì.';
+    expect(parseOrderStatus(text)).toBe('In arrivo');
+  });
 });

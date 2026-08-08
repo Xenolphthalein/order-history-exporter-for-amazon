@@ -146,7 +146,7 @@ export function extractPriceFromText(
   const pricePatterns = [
     // Labeled totals with optional currency prefix/suffix (e.g. "Total: $12.99")
     new RegExp(
-      `(?:Summe|Gesamtsumme|Gesamt|Total|Totalt|Summa)[:\\s]*${CT}?\\s*([0-9][0-9.,]*)\\s*${CT}?`,
+      `(?:Summe|Gesamtsumme|Gesamt|Total|Totale|Totalt|Summa)[:\\s]*${CT}?\\s*([0-9][0-9.,]*)\\s*${CT}?`,
       'gi'
     ),
     // Currency-prefixed amounts (e.g. "$ 29.99", "EUR 12,99")
@@ -170,4 +170,92 @@ export function extractPriceFromText(
   }
 
   return null;
+}
+
+/**
+ * Matches known "total" labels across supported locales. Uses a prefix
+ * match (not an exact word list) so locale variants sharing a common root
+ * with the generic "Total" (e.g. Italian "Totale") are matched without
+ * needing to enumerate every inflection.
+ */
+const TOTAL_LABEL_PATTERN = /^(total|totale|summe|gesamt|totalt|summa)\b/i;
+
+/**
+ * Extract the order total from label/value row pairs scraped from the order
+ * header (Amazon's order-history page structure: a caption like "Totale"
+ * followed by a value like "13,99 €", as two sibling elements).
+ *
+ * This is preferred over scanning the whole order card's text because that
+ * text also contains the shipping address, item titles, etc. — a plain
+ * currency-adjacent-number scan can pick up unrelated digits from there
+ * (e.g. a postal code) when the label isn't recognized.
+ */
+export function extractTotalFromRows(
+  rows: { label: string; value: string }[],
+  hostname?: string
+): { amount: number; currency: string } | null {
+  for (const row of rows) {
+    if (TOTAL_LABEL_PATTERN.test(row.label.trim())) {
+      const result = extractPriceFromText(row.value, hostname);
+      if (result) return result;
+    }
+  }
+  return null;
+}
+
+/**
+ * Matches gift-card line-item labels across supported locales (the ones
+ * already used elsewhere in this codebase: de, en, fr, sv, es, it). Amazon's
+ * order-details "charge summary" lists a deduction row like "Importo Buono
+ * Regalo: -19,10 €" when a gift card covers part or all of an order.
+ */
+const GIFT_CARD_LABEL_PATTERN =
+  /(gift\s*card|geschenkgutschein|ch[eè]que[\s-]?cadeau|carte[\s-]?cadeau|presentkort|tarjeta\s*(de\s*)?regalo|cheque\s*regalo|buono\s*regalo)/i;
+
+/**
+ * Matches a trailing "total refund" row across locales. When an order was
+ * returned, Amazon appends this row (e.g. "Totale rimborso: 23,19 €") after
+ * the normal charge-summary rows — it describes what was refunded, not what
+ * was charged, and must be excluded before picking the "last row" as the
+ * charged amount.
+ */
+const REFUND_TOTAL_LABEL_PATTERN =
+  /(total\s*refund|r[uü]ckerstattungsbetrag|montant\s*rembours[eé]|[aå]terbetalt\s*belopp|importe\s*reembolsado|totale\s*rimborso)/i;
+
+/**
+ * Summarize the order-details "charge summary" rows (Amazon's
+ * `[data-component="chargeSummary"]` line-item list: item subtotal,
+ * shipping, tax, running total, and — when applicable — a gift-card
+ * deduction followed by a final total). Any trailing "total refund" row
+ * (present when the order was returned) is excluded first.
+ *
+ * `chargedAmount` is the amount of the LAST (non-refund) row, which Amazon
+ * always renders as the running total after any deductions — this works
+ * regardless of locale since it doesn't depend on matching a "total" label,
+ * just row order. `giftCardAmount` sums whichever rows look like a
+ * *negative* gift card deduction, so a fully gift-card-covered order ends
+ * up with `chargedAmount: 0` and `giftCardAmount` equal to what the card
+ * covered. A positive row with a gift-card-like label (e.g. buying a gift
+ * card itself as a product, paid normally) is correctly not counted.
+ */
+export function summarizePaymentRows(rows: { label: string; amount: number }[]): {
+  chargedAmount: number | null;
+  giftCardAmount: number;
+} {
+  const chargeRows = rows.filter((row) => !REFUND_TOTAL_LABEL_PATTERN.test(row.label));
+
+  if (chargeRows.length === 0) {
+    return { chargedAmount: null, giftCardAmount: 0 };
+  }
+
+  const chargedAmount = chargeRows[chargeRows.length - 1]?.amount ?? null;
+  // A real gift-card deduction is always negative (e.g. "-19,10 €"). A
+  // positive row matching the label text instead means the gift card was
+  // the *product being purchased* (paid normally, e.g. by card) rather than
+  // a payment method — checking the sign avoids conflating the two.
+  const giftCardAmount = chargeRows
+    .filter((row) => row.amount < 0 && GIFT_CARD_LABEL_PATTERN.test(row.label))
+    .reduce((sum, row) => sum + Math.abs(row.amount), 0);
+
+  return { chargedAmount, giftCardAmount: Math.round(giftCardAmount * 100) / 100 };
 }
