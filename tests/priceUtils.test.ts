@@ -81,6 +81,7 @@ describe('CURRENCY_TOKEN', () => {
     expect('GBP 12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
     expect('USD 12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
     expect('EUR 12,99'.match(itemPricePattern)?.[1]).toBe('12,99');
+    expect('AED 12.99'.match(itemPricePattern)?.[1]).toBe('12.99');
   });
 
   it('should match a krona price', () => {
@@ -178,6 +179,7 @@ describe('detectCurrency', () => {
       expect(detectCurrency('Total: 12.99', 'www.amazon.com.mx')).toBe('MXN');
       expect(detectCurrency('Total: 12.99', 'www.amazon.com.au')).toBe('AUD');
       expect(detectCurrency('Total: 12.99', 'www.amazon.de')).toBe('EUR');
+      expect(detectCurrency('Total: 12.99', 'www.amazon.ae')).toBe('AED');
     });
 
     it('should still prefer explicit symbols over domain', () => {
@@ -210,6 +212,8 @@ describe('detectCurrency', () => {
       expect(detectCurrency('Total: CAD 29.99')).toBe('CAD');
       // MXN
       expect(detectCurrency('Total: MXN 683.23')).toBe('MXN');
+      // AED
+      expect(detectCurrency('Total: AED 49.99', 'www.amazon.ae')).toBe('AED');
     });
 
     it('should prefer R$ over $ when both are present', () => {
@@ -321,10 +325,16 @@ describe('extractPriceFromText', () => {
       const result = extractPriceFromText('Total: $29.99', 'www.amazon.ca');
       expect(result).toEqual({ amount: 29.99, currency: 'CAD' });
     });
+    it('should extract AED price on amazon.ae', () => {
+      const result = extractPriceFromText('Total: AED 49.99', 'www.amazon.ae');
+      expect(result).toEqual({ amount: 49.99, currency: 'AED' });
+    });
 
     it('should use domain default when no currency symbol present', () => {
       const result = extractPriceFromText('Total: 683.23', 'www.amazon.com.mx');
       expect(result).toEqual({ amount: 683.23, currency: 'MXN' });
+      const aedResult = extractPriceFromText('Total: 49.99', 'www.amazon.ae');
+      expect(aedResult).toEqual({ amount: 49.99, currency: 'AED' });
     });
   });
 });

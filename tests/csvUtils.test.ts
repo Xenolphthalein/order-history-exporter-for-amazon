@@ -51,6 +51,15 @@ describe('formatPromotionsForCSV', () => {
     ];
     expect(formatPromotionsForCSV(promotions)).toBe('Coupon: €5; Prime: €3.5');
   });
+  it('should format AED promotions with the order currency', () => {
+    const promotions = [{ description: 'Coupon', amount: 5.0 }];
+    expect(formatPromotionsForCSV(promotions, 'AED')).toBe('Coupon: AED 5');
+  });
+
+  it('should default promotion formatting to EUR', () => {
+    const promotions = [{ description: 'Coupon', amount: 5.0 }];
+    expect(formatPromotionsForCSV(promotions)).toBe('Coupon: €5');
+  });
 
   it('should return empty string for no promotions', () => {
     expect(formatPromotionsForCSV([])).toBe('');
@@ -73,6 +82,16 @@ describe('convertOrdersToCSV', () => {
     recipientCityPostal: '',
     recipientCountry: '',
     ...overrides,
+  });
+  it('should format promotions using the order currency', () => {
+    const orders = [
+      createOrder({
+        currency: 'AED',
+        promotions: [{ description: 'Coupon', amount: 5.0 }],
+      }),
+    ];
+    const csv = convertOrdersToCSV(orders);
+    expect(csv).toContain('Coupon: AED 5');
   });
 
   it('should create CSV with headers', () => {

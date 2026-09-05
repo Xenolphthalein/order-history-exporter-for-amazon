@@ -53,13 +53,14 @@ export function parsePrice(priceStr: string): number {
  * Symbols are self-delimiting and don't need word boundaries.
  */
 export const CURRENCY_TOKEN =
-  '(?:\\b(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|KR)\\b|€|£|\\$|R\\$|¥|₹)';
+  '(?:\\b(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|KR|AED)\\b|€|£|\\$|R\\$|¥|₹)';
 
 /**
  * Map of Amazon domains to their default currencies.
  * Used to disambiguate the $ symbol (USD, AUD, CAD, MXN, BRL, etc.).
  */
 const DOMAIN_CURRENCY_MAP: Record<string, string> = {
+  'amazon.ae': 'AED',
   'amazon.com': 'USD',
   'amazon.com.au': 'AUD',
   'amazon.ca': 'CAD',
@@ -98,6 +99,8 @@ export function getCurrencyForDomain(hostname: string): string | null {
 export function detectCurrency(text: string, hostname?: string): string {
   if (text.includes('€') || text.includes('EUR')) {
     return 'EUR';
+  } else if (text.includes('AED')) {
+    return 'AED';
   } else if (text.includes('£') || text.includes('GBP')) {
     return 'GBP';
   } else if (text.includes('R$') || text.includes('BRL')) {

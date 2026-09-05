@@ -21,9 +21,11 @@ export function escapeCSVValue(value: string | number | undefined): string {
  * Format promotions as a string for CSV
  */
 export function formatPromotionsForCSV(
-  promotions: { description: string; amount: number }[]
+  promotions: { description: string; amount: number }[],
+  currency: string = 'EUR'
 ): string {
-  return promotions.map((p) => `${p.description}: €${p.amount}`).join('; ');
+  const currencyPrefix = currency === 'EUR' ? '€' : `${currency} `;
+  return promotions.map((p) => `${p.description}: ${currencyPrefix}${p.amount}`).join('; ');
 }
 
 /**
@@ -59,7 +61,7 @@ export function convertOrdersToCSV(
   const rows: string[] = [headers.join(',')];
 
   orders.forEach((order) => {
-    const promotionsStr = formatPromotionsForCSV(order.promotions);
+    const promotionsStr = formatPromotionsForCSV(order.promotions, order.currency);
 
     if (order.items.length === 0) {
       rows.push(

@@ -19,6 +19,7 @@ import {
   extractPriceFromText,
   parsePrice,
   CURRENCY_TOKEN,
+  getCurrencyForDomain,
   parseOrderStatus,
 } from '../utils';
 import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
@@ -551,7 +552,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       orderId: '',
       orderDate: '',
       totalAmount: 0,
-      currency: 'EUR',
+      currency: getCurrencyForDomain(window.location.hostname) ?? 'EUR',
       items: [],
       orderStatus: '',
       detailsUrl: '',
@@ -937,7 +938,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         const rowText = row.textContent || '';
         // Look for item-specific discounts
         const discountMatch = rowText.match(
-          /(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\s]*-?\s*(?:EUR|€)?\s*([0-9]+[.,][0-9]{2})/i
+          new RegExp(
+            `(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
+            'i'
+          )
         );
         if (discountMatch?.[2]) {
           const discountAmount = parsePrice(discountMatch[2]);

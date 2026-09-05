@@ -64,6 +64,14 @@ describe('isAmazonOrderHistoryPage', () => {
       expect(isAmazonOrderHistoryPage('https://www.amazon.com.be/your-orders/orders')).toBe(true);
     });
 
+    it('should return true for amazon.ae order history', () => {
+      expect(isAmazonOrderHistoryPage('https://www.amazon.ae/your-orders/orders')).toBe(true);
+    });
+
+    it('should return true for nested amazon.ae subdomains', () => {
+      expect(isAmazonOrderHistoryPage('https://orders.eu.amazon.ae/your-orders/orders')).toBe(true);
+    });
+
     it('should return true for amazon.de css order history', () => {
       expect(
         isAmazonOrderHistoryPage(
@@ -132,6 +140,18 @@ describe('getOrderHistoryBaseUrl', () => {
     );
   });
 
+  it('should build the amazon.ae base URL', () => {
+    expect(getOrderHistoryBaseUrl('https://www.amazon.ae/your-orders?timeFilter=year-2024')).toBe(
+      'https://www.amazon.ae/your-orders/orders'
+    );
+  });
+
+  it('should preserve nested amazon.ae subdomains in the base URL', () => {
+    expect(getOrderHistoryBaseUrl('https://orders.eu.amazon.ae/your-orders/orders?page=2')).toBe(
+      'https://orders.eu.amazon.ae/your-orders/orders'
+    );
+  });
+
   it('should preserve gp/css/order-history base path', () => {
     expect(
       getOrderHistoryBaseUrl(
@@ -187,6 +207,7 @@ describe('constants', () => {
     expect(AMAZON_DOMAINS).toContain('amazon.de');
     expect(AMAZON_DOMAINS).toContain('amazon.co.uk');
     expect(AMAZON_DOMAINS).toContain('amazon.com.be');
+    expect(AMAZON_DOMAINS).toContain('amazon.ae');
     expect(AMAZON_DOMAINS.length).toBeGreaterThan(5);
   });
 
