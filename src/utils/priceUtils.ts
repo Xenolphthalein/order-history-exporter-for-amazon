@@ -134,6 +134,14 @@ export function detectCurrency(text: string, hostname?: string): string {
 }
 
 /**
+ * Parse an amount string that may be prefixed/suffixed with any supported
+ * currency symbol or code (e.g. "EUR 40,00", "-19,10 €", "R$ 40,00").
+ */
+export function parseCurrencyAmount(text: string): number {
+  return parsePrice(text.replace(new RegExp(CURRENCY_TOKEN, 'gi'), '').trim());
+}
+
+/**
  * Extract price from text using common patterns.
  * When `hostname` is provided, it is forwarded to `detectCurrency` to
  * disambiguate currency symbols (e.g. $ on amazon.com.mx → MXN).
@@ -196,7 +204,10 @@ export function extractTotalFromRows(
 ): { amount: number; currency: string } | null {
   for (const row of rows) {
     if (TOTAL_LABEL_PATTERN.test(row.label.trim())) {
-      const result = extractPriceFromText(row.value, hostname);
+      // Include the label so the labeled-total pattern matches instead of
+      // the currency-suffix fallback, which only captures the last decimal
+      // group (e.g. "234,56" out of "1.234,56 €").
+      const result = extractPriceFromText(`${row.label} ${row.value}`, hostname);
       if (result) return result;
     }
   }

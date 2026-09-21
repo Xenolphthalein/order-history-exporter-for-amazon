@@ -291,7 +291,8 @@ describe('parseOrderDate', () => {
   });
 
   it('should extract Italian date from "Ordine effettuato il" label', () => {
-    const text = 'Numero ordine: 123-4567890-1234567\nOrdine effettuato il 15 gennaio 2024\nArticolo';
+    const text =
+      'Numero ordine: 123-4567890-1234567\nOrdine effettuato il 15 gennaio 2024\nArticolo';
     expect(parseOrderDate(text)).toBe('2024-01-15');
   });
 

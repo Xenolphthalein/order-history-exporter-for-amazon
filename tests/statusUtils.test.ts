@@ -161,9 +161,7 @@ describe('parseOrderStatus', () => {
   it('should extract Italian return/refund statuses', () => {
     expect(parseOrderStatus('Reso completato')).toBe('Reso completato');
     expect(parseOrderStatus('Reso avviato')).toBe('Reso avviato');
-    expect(parseOrderStatus('Rimborsato il 10 gennaio 2024')).toBe(
-      'Rimborsato il 10 gennaio 2024'
-    );
+    expect(parseOrderStatus('Rimborsato il 10 gennaio 2024')).toBe('Rimborsato il 10 gennaio 2024');
   });
 
   it('should extract Italian "In arrivo" status', () => {

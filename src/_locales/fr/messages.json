@@ -242,5 +242,13 @@
   "csvHeaderRecipientCountry": {
     "message": "Pays du destinataire",
     "description": "CSV header for the shipping recipient's country"
+  },
+  "csvHeaderChargedAmount": {
+    "message": "Montant débité",
+    "description": "CSV header for the amount actually charged to the payment method"
+  },
+  "csvHeaderGiftCardAmount": {
+    "message": "Montant du chèque-cadeau",
+    "description": "CSV header for the amount covered by a gift card"
   }
 }

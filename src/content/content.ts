@@ -21,6 +21,7 @@ import {
   extractTotalFromRows,
   summarizePaymentRows,
   parsePrice,
+  parseCurrencyAmount,
   CURRENCY_TOKEN,
   parseOrderStatus,
 } from '../utils';
@@ -1156,7 +1157,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       const label = (labelEl?.textContent || '').replace(/\s+/g, ' ').trim();
       const valueText = (valueEl?.textContent || '').replace(/\s+/g, ' ').trim();
       if (!label || !valueText) return;
-      const amount = parsePrice(valueText.replace(/[€$£]/g, '').trim());
+      const amount = parseCurrencyAmount(valueText);
       rows.push({ label, amount });
     });
 

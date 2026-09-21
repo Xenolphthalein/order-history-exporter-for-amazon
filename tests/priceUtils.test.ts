@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parsePrice,
+  parseCurrencyAmount,
   detectCurrency,
   extractPriceFromText,
   extractTotalFromRows,
@@ -61,6 +62,28 @@ describe('parsePrice', () => {
     it('should parse simple integers', () => {
       expect(parsePrice('100')).toBe(100);
     });
+  });
+});
+
+describe('parseCurrencyAmount', () => {
+  it('should parse values prefixed with a currency code', () => {
+    expect(parseCurrencyAmount('EUR 40,00')).toBe(40);
+    expect(parseCurrencyAmount('SEK 40,00')).toBe(40);
+  });
+
+  it('should parse values with the ₹ and R$ symbols', () => {
+    expect(parseCurrencyAmount('₹40.00')).toBe(40);
+    expect(parseCurrencyAmount('R$ 40,00')).toBe(40);
+  });
+
+  it('should preserve the sign of a gift-card deduction row', () => {
+    expect(parseCurrencyAmount('-19,10 €')).toBe(-19.1);
+  });
+
+  it('should still handle the original €/$/£ symbols', () => {
+    expect(parseCurrencyAmount('€40,00')).toBe(40);
+    expect(parseCurrencyAmount('$40.00')).toBe(40);
+    expect(parseCurrencyAmount('£40.00')).toBe(40);
   });
 });
 
@@ -372,6 +395,16 @@ describe('extractTotalFromRows', () => {
 
   it('should return null when no row matches', () => {
     expect(extractTotalFromRows([])).toBeNull();
+  });
+
+  it('should preserve thousands separators in the total (label + value combined)', () => {
+    // Regression: passing only `row.value` to `extractPriceFromText` drops
+    // the "Total"/"Totale" label, so the labeled-total pattern (which allows
+    // a full `[0-9][0-9.,]*` run) never matches. The fallback
+    // currency-suffix pattern then only captures the last decimal group,
+    // turning "1.234,56 €" into 234.56 instead of 1234.56.
+    const rows = [{ label: 'Totale', value: '1.234,56 €' }];
+    expect(extractTotalFromRows(rows)).toEqual({ amount: 1234.56, currency: 'EUR' });
   });
 
   it('should not be fooled by a postal code in another row', () => {

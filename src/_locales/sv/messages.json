@@ -242,5 +242,13 @@
   "csvHeaderRecipientCountry": {
     "message": "Mottagarland",
     "description": "CSV header for the shipping recipient's country"
+  },
+  "csvHeaderChargedAmount": {
+    "message": "Debiterat belopp",
+    "description": "CSV header for the amount actually charged to the payment method"
+  },
+  "csvHeaderGiftCardAmount": {
+    "message": "Presentkortsbelopp",
+    "description": "CSV header for the amount covered by a gift card"
   }
 }
