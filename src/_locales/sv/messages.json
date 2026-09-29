@@ -141,6 +141,24 @@
       }
     }
   },
+  "includeTransactions": {
+    "message": "Inkludera transaktionsdetaljer",
+    "description": "Checkbox label to include per-order transaction data"
+  },
+  "includeTransactionsHint": {
+    "message": "Hämtar en extra sida per beställning — långsammare",
+    "description": "Hint text below the include transactions checkbox"
+  },
+  "fetchingPricesAndTransactions": {
+    "message": "Hämtar priser och transaktioner för $COUNT$ beställningar...",
+    "description": "Progress message when fetching both prices and transactions",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "25"
+      }
+    }
+  },
   "generatingFile": {
     "message": "Skapar fil...",
     "description": "Progress message while generating file"
@@ -250,5 +268,13 @@
   "csvHeaderGiftCardAmount": {
     "message": "Presentkortsbelopp",
     "description": "CSV header for the amount covered by a gift card"
+  },
+  "csvHeaderTransactionDates": {
+    "message": "Transaktionsdatum",
+    "description": "CSV header for transaction dates"
+  },
+  "csvHeaderTransactionAmounts": {
+    "message": "Transaktionsbelopp",
+    "description": "CSV header for transaction amounts"
   }
 }

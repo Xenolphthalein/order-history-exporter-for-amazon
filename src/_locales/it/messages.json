@@ -141,6 +141,24 @@
       }
     }
   },
+  "includeTransactions": {
+    "message": "Includi dettagli delle transazioni",
+    "description": "Checkbox label to include per-order transaction data"
+  },
+  "includeTransactionsHint": {
+    "message": "Carica una pagina aggiuntiva per ordine — più lento",
+    "description": "Hint text below the include transactions checkbox"
+  },
+  "fetchingPricesAndTransactions": {
+    "message": "Recupero prezzi e transazioni per $COUNT$ ordini...",
+    "description": "Progress message when fetching both prices and transactions",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "25"
+      }
+    }
+  },
   "generatingFile": {
     "message": "Generazione file...",
     "description": "Progress message while generating file"
@@ -250,5 +268,13 @@
   "csvHeaderGiftCardAmount": {
     "message": "Importo Buono Regalo",
     "description": "CSV header for the amount covered by a gift card"
+  },
+  "csvHeaderTransactionDates": {
+    "message": "Date Transazioni",
+    "description": "CSV header for transaction dates"
+  },
+  "csvHeaderTransactionAmounts": {
+    "message": "Importi Transazioni",
+    "description": "CSV header for transaction amounts"
   }
 }

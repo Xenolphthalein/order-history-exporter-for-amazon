@@ -4,7 +4,14 @@
  */
 
 import browser from 'webextension-polyfill';
-import type { ExportOptions, ExportState, Order, OrderItem, Promotion } from '../types';
+import type {
+  ExportOptions,
+  ExportState,
+  Order,
+  OrderItem,
+  Promotion,
+  Transaction,
+} from '../types';
 import {
   parseOrderDate,
   parseOrderDateFromRows,
@@ -25,6 +32,8 @@ import {
   CURRENCY_TOKEN,
   getCurrencyForDomain,
   parseOrderStatus,
+  buildTransactionUrl,
+  buildTransactionsFromCPEEntries,
 } from '../utils';
 import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
@@ -86,7 +95,13 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   function getExportState(): ExportState | null {
     try {
       const data = sessionStorage.getItem(STORAGE_KEY);
-      return data ? (JSON.parse(data) as ExportState) : null;
+      if (!data) return null;
+      const state = JSON.parse(data) as ExportState;
+      // Default field added in a later version — ensure backward compatibility
+      if (typeof state.includeTransactions !== 'boolean') {
+        state.includeTransactions = false;
+      }
+      return state;
     } catch {
       return null;
     }
@@ -150,7 +165,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Reset stop flag for fresh export
     stopRequested = false;
 
-    const { format, startDate, endDate, exportAll } = options;
+    const { format, startDate, endDate, exportAll, includeTransactions } = options;
 
     // Get available years
     const years = getAvailableYears();
@@ -175,6 +190,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       startDate: startDate,
       endDate: endDate,
       exportAll: exportAll,
+      includeTransactions,
       yearsToProcess: yearsToProcess,
       currentYearIndex: 0,
       currentStartIndex: 0,
@@ -235,7 +251,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     const endDateObj = state.endDate ? new Date(state.endDate) : null;
 
     // Scrape orders from current page
-    const pageOrders = scrapeVisibleOrders(
+    const { orders: pageOrders, passedStartDate } = scrapeVisibleOrders(
       startDateObj,
       endDateObj,
       state.exportAll,
@@ -255,7 +271,11 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Check if there are more pages for current year
     const hasNextPage = checkForNextPage();
 
-    if (hasNextPage && pageOrders.length > 0) {
+    // Continue to the next page if Amazon shows one AND we haven't gone past the
+    // start date yet. In date-range mode, Amazon lists orders newest-first, so
+    // early pages may have zero matches (all too new) — we must keep paginating
+    // until we either find matches or encounter orders older than startDate.
+    if (hasNextPage && !passedStartDate) {
       // Navigate to next page of current year
       state.currentStartIndex += 10;
       saveExportState(state);
@@ -296,10 +316,15 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   async function finishExport(state: ExportState): Promise<void> {
     console.log('[Amazon Exporter] Export complete. Total orders:', state.collectedOrders.length);
 
-    updateProgress(80, getMessage('fetchingPrices', [String(state.collectedOrders.length)]));
+    updateProgress(
+      80,
+      state.includeTransactions
+        ? getMessage('fetchingPricesAndTransactions', [String(state.collectedOrders.length)])
+        : getMessage('fetchingPrices', [String(state.collectedOrders.length)])
+    );
 
-    // Fetch item prices for multi-item orders
-    await fetchOrderDetailsForPrices(state.collectedOrders);
+    // Fetch item prices (and optionally transaction details) for all orders
+    await fetchOrderDetailsForPrices(state.collectedOrders, state.includeTransactions);
 
     // Check if stop was requested during price fetching (state already cleared by handler)
     if (stopRequested || !getExportState()) {
@@ -315,11 +340,14 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     const timestamp = new Date().toISOString().split('T')[0];
 
     if (state.format === 'json') {
-      fileContent = JSON.stringify(state.collectedOrders, null, 2);
+      const jsonOrders = state.includeTransactions
+        ? state.collectedOrders
+        : state.collectedOrders.map(({ transactions: _tx, ...rest }) => rest);
+      fileContent = JSON.stringify(jsonOrders, null, 2);
       fileName = `amazon-orders-${timestamp}.json`;
       mimeType = 'application/json';
     } else {
-      fileContent = convertToCSV(state.collectedOrders);
+      fileContent = convertToCSV(state.collectedOrders, state.includeTransactions);
       fileName = `amazon-orders-${timestamp}.csv`;
       mimeType = 'text/csv';
     }
@@ -453,8 +481,9 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     endDateObj: Date | null,
     exportAll: boolean,
     seenOrderIds: Set<string>
-  ): Order[] {
+  ): { orders: Order[]; passedStartDate: boolean } {
     const orders: Order[] = [];
+    let passedStartDate = false;
 
     console.log('[Amazon Exporter] Scraping visible page...');
     console.log('[Amazon Exporter] URL:', window.location.href);
@@ -521,7 +550,19 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           // Filter by date if specified
           if (!exportAll && startDateObj && endDateObj && order.orderDate) {
             const orderDateObj = new Date(order.orderDate);
-            if (orderDateObj < startDateObj || orderDateObj > endDateObj) {
+            if (orderDateObj < startDateObj) {
+              // This order is older than our start date. Since Amazon lists orders
+              // newest-first, all subsequent pages will also be out-of-range.
+              passedStartDate = true;
+              console.log(
+                `[Amazon Exporter] Skipping order ${order.orderId}: date ${order.orderDate} before range start ${startDateObj.toISOString().split('T')[0]}`
+              );
+              return;
+            }
+            if (orderDateObj > endDateObj) {
+              console.log(
+                `[Amazon Exporter] Skipping order ${order.orderId}: date ${order.orderDate} after range end ${endDateObj.toISOString().split('T')[0]}`
+              );
               return;
             }
           }
@@ -536,7 +577,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       }
     });
 
-    return orders;
+    return { orders, passedStartDate };
   }
 
   /**
@@ -598,7 +639,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Extract Order ID
     order.orderId = extractOrderId(orderText) || '';
 
-    // Try links for order ID
+    // Try links for order ID via orderID=/orderId= query param
     if (!order.orderId) {
       const links = orderEl.querySelectorAll('a[href]');
       for (const link of links) {
@@ -609,6 +650,46 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           break;
         }
       }
+    }
+
+    // Try data attributes on the order element and its children
+    if (!order.orderId) {
+      const attrTargets: (Element | null)[] = [
+        orderEl,
+        ...Array.from(orderEl.querySelectorAll('[data-order-id], [data-orderid], [data-order]')),
+      ];
+      for (const el of attrTargets) {
+        if (!el) continue;
+        const raw =
+          el.getAttribute('data-order-id') ||
+          el.getAttribute('data-orderid') ||
+          el.getAttribute('data-order') ||
+          el.id ||
+          '';
+        const match = raw.match(/\d{3}-\d{7}-\d{7}/);
+        if (match?.[0]) {
+          order.orderId = match[0];
+          break;
+        }
+      }
+    }
+
+    // Last resort: scan every link href for the order ID pattern directly
+    if (!order.orderId) {
+      const allLinks = orderEl.querySelectorAll('a[href]');
+      for (const link of allLinks) {
+        const href = (link as HTMLAnchorElement).href || link.getAttribute('href') || '';
+        const match = href.match(/\d{3}-\d{7}-\d{7}/);
+        if (match?.[0]) {
+          order.orderId = match[0];
+          break;
+        }
+      }
+    }
+
+    if (!order.orderId) {
+      const snippet = orderText.replace(/\s+/g, ' ').trim().substring(0, 150);
+      console.warn(`[Amazon Exporter] Could not extract order ID. Card text: "${snippet}"`);
     }
 
     // Extract order details URL
@@ -871,11 +952,12 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   }
 
   /**
-   * Fetch order details for item prices and discounts
+   * Fetch order details for item prices, discounts, and (optionally) transactions
    */
-  async function fetchOrderDetailsForPrices(orders: Order[]): Promise<void> {
-    // We need to fetch details for all orders to get accurate pricing and discounts
-    // Even single-item orders can have discounts
+  async function fetchOrderDetailsForPrices(
+    orders: Order[],
+    includeTransactions: boolean
+  ): Promise<void> {
     const ordersNeedingDetails = orders.filter((order) => order.detailsUrl);
 
     console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'orders');
@@ -899,21 +981,110 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           credentials: 'include',
         });
 
-        if (!response.ok) continue;
+        if (response.ok) {
+          const html = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          parseItemPricesFromDetails(order, doc);
+          parsePromotionsFromDetails(order, doc);
+          parsePaymentSummaryFromDetails(order, doc);
+        }
 
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+        // Fetch the CPE transaction page for actual charged amounts.
+        // Derive the origin per-order from its detailsUrl: users can have
+        // orders across multiple locales (amazon.com + amazon.de) in the same
+        // export, so a single global origin would be wrong. If detailsUrl
+        // isn't a valid URL, skip transactions for this order.
+        if (includeTransactions && order.orderId) {
+          let transactionOrigin = '';
+          let transactionHost = '';
+          try {
+            const detailsUrl = new URL(order.detailsUrl);
+            transactionOrigin = detailsUrl.origin;
+            transactionHost = detailsUrl.hostname;
+          } catch {
+            console.warn(
+              '[Amazon Exporter] Could not derive origin from detailsUrl for order:',
+              order.orderId
+            );
+          }
 
-        parseItemPricesFromDetails(order, doc);
-        parsePromotionsFromDetails(order, doc);
-        parsePaymentSummaryFromDetails(order, doc);
+          if (transactionOrigin) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            const txUrl = buildTransactionUrl(transactionOrigin, order.orderId);
+            try {
+              const txResponse = await fetch(txUrl, { credentials: 'include' });
+              if (txResponse.ok) {
+                const txHtml = await txResponse.text();
+                const txParser = new DOMParser();
+                const txDoc = txParser.parseFromString(txHtml, 'text/html');
+                order.transactions = parseTransactionsFromCPEDoc(txDoc, transactionHost);
+                if (order.transactions.length > 0) {
+                  console.log(
+                    `[Amazon Exporter] ${order.transactions.length} transaction(s) from CPE page for order ${order.orderId}`
+                  );
+                } else {
+                  console.warn(
+                    `[Amazon Exporter] No transactions found in CPE page for ${order.orderId}`
+                  );
+                }
+              }
+            } catch (txError) {
+              console.warn(
+                '[Amazon Exporter] Error fetching transactions for order:',
+                order.orderId,
+                txError
+              );
+              order.transactions = [];
+            }
+          }
+        }
 
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
         console.warn('[Amazon Exporter] Error fetching details:', error);
       }
     }
+  }
+
+  /**
+   * Walk the CPE (`/cpe/yourpayments/transactions`) DOM and extract per-order
+   * transactions. DOM traversal lives here in the content script; sign/amount
+   * parsing is delegated to the pure `buildTransactionsFromCPEEntries` utility so it
+   * can be unit-tested without jsdom.
+   */
+  function parseTransactionsFromCPEDoc(doc: Document, hostname: string): Transaction[] {
+    const entries: { date: string; amountText: string }[] = [];
+    // Deduplicate by DOM node only (nested groups can match the same element).
+    // Date + amount is not unique: two equal charges on one day are distinct.
+    const seen = new Set<Element>();
+
+    const groups = doc.querySelectorAll('.a-box-group');
+    for (const group of groups) {
+      const dateEl = group.querySelector('.apx-transaction-date-container span');
+      if (!dateEl) continue;
+
+      const dateText = dateEl.textContent?.trim() ?? '';
+      const date = parseOrderDate(dateText);
+      if (!date) continue;
+
+      const amountEls = group.querySelectorAll(
+        '.a-column.a-span3.a-text-right.a-span-last .a-size-base-plus.a-text-bold,' +
+          '.apx-transactions-line-item-component-container .a-size-base-plus.a-text-bold'
+      );
+
+      for (const amountEl of amountEls) {
+        const amountText = amountEl.textContent?.trim() ?? '';
+        if (!amountText) continue;
+
+        if (seen.has(amountEl)) continue;
+        seen.add(amountEl);
+        entries.push({ date, amountText });
+      }
+    }
+
+    return buildTransactionsFromCPEEntries(entries, hostname);
   }
 
   /**
@@ -1171,8 +1342,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
   /**
    * Convert orders to CSV format (wrapper using utility function)
    */
-  function convertToCSV(orders: Order[]): string {
-    return convertOrdersToCSV(orders, getMessage);
+  function convertToCSV(orders: Order[], includeTransactions: boolean): string {
+    return convertOrdersToCSV(orders, getMessage, includeTransactions);
   }
 
   /**

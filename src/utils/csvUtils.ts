@@ -3,6 +3,7 @@
  */
 
 import type { Order } from '../types';
+import { formatTransactionDatesForCSV, formatTransactionAmountsForCSV } from './transactionUtils';
 
 /**
  * Escape a value for CSV format
@@ -32,10 +33,12 @@ export function formatPromotionsForCSV(
  * Convert orders to CSV format
  * @param orders - Array of orders to convert
  * @param getHeader - Function to get localized header name
+ * @param includeTransactions - Whether to add Transaction Dates and Transaction Amounts columns
  */
 export function convertOrdersToCSV(
   orders: Order[],
-  getHeader: (key: string) => string = (key) => key
+  getHeader: (key: string) => string = (key) => key,
+  includeTransactions: boolean = false
 ): string {
   const headers = [
     getHeader('csvHeaderOrderId'),
@@ -60,10 +63,27 @@ export function convertOrdersToCSV(
     getHeader('csvHeaderGiftCardAmount'),
   ];
 
+  if (includeTransactions) {
+    headers.push(getHeader('csvHeaderTransactionDates'));
+    headers.push(getHeader('csvHeaderTransactionAmounts'));
+  }
+
   const rows: string[] = [headers.join(',')];
 
   orders.forEach((order) => {
     const promotionsStr = formatPromotionsForCSV(order.promotions, order.currency);
+    const transactions = order.transactions ?? [];
+    const txDates = includeTransactions
+      ? escapeCSVValue(formatTransactionDatesForCSV(transactions))
+      : null;
+    const txAmounts = includeTransactions
+      ? escapeCSVValue(formatTransactionAmountsForCSV(transactions))
+      : null;
+
+    const txColumns = (firstRow: boolean): (string | number)[] => {
+      if (!includeTransactions) return [];
+      return firstRow ? [txDates ?? '', txAmounts ?? ''] : ['', ''];
+    };
 
     if (order.items.length === 0) {
       rows.push(
@@ -88,6 +108,7 @@ export function convertOrdersToCSV(
           escapeCSVValue(order.recipientCountry),
           order.chargedAmount ?? '',
           order.giftCardAmount,
+          ...txColumns(true),
         ].join(',')
       );
     } else {
@@ -114,6 +135,7 @@ export function convertOrdersToCSV(
             index === 0 ? escapeCSVValue(order.recipientCountry) : '',
             index === 0 ? (order.chargedAmount ?? '') : '',
             index === 0 ? order.giftCardAmount : '',
+            ...txColumns(index === 0),
           ].join(',')
         );
       });
