@@ -24,7 +24,8 @@
     "*://*.amazon.com.au/*",
     "*://*.amazon.com.br/*",
     "*://*.amazon.com.mx/*",
-    "*://*.amazon.com.be/*"
+    "*://*.amazon.com.be/*",
+    "*://*.amazon.ae/*"
   ],
   "action": {
     "default_icon": {
@@ -78,7 +79,10 @@
         "*://*.amazon.com.mx/*your-orders*",
         "*://*.amazon.com.be/*gp/your-account/order-history*",
         "*://*.amazon.com.be/*gp/css/order-history*",
-        "*://*.amazon.com.be/*your-orders*"
+        "*://*.amazon.com.be/*your-orders*",
+        "*://*.amazon.ae/*gp/your-account/order-history*",
+        "*://*.amazon.ae/*gp/css/order-history*",
+        "*://*.amazon.ae/*your-orders*"
       ],
       "js": ["content/content.js"],
       "run_at": "document_idle"
