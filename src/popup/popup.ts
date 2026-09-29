@@ -45,6 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const startDateInput = document.getElementById('startDate') as HTMLInputElement;
   const endDateInput = document.getElementById('endDate') as HTMLInputElement;
   const settingsSection = document.getElementById('settings-section') as HTMLElement;
+  const downloadInvoicesCheckbox = document.getElementById('downloadInvoices') as HTMLInputElement;
+
+  // Restore persisted checkbox state
+  const stored = await browser.storage.local.get('downloadInvoices');
+  downloadInvoicesCheckbox.checked = stored['downloadInvoices'] === true;
+
+  downloadInvoicesCheckbox.addEventListener('change', () => {
+    void browser.storage.local.set({ downloadInvoices: downloadInvoicesCheckbox.checked });
+  });
 
   // Set default date values
   const today = new Date();
@@ -124,6 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         startDate: startDate,
         endDate: endDate,
         exportAll: exportRange === 'all',
+        downloadInvoices: downloadInvoicesCheckbox.checked,
       };
 
       // Send message to content script
