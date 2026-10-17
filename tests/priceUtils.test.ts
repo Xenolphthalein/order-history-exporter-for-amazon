@@ -648,6 +648,18 @@ describe('amazon.co.jp (JPY)', () => {
       expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 3480, giftCardAmount: 0 });
     });
 
+    it('should parse the raw chargeSummary strings from a real order-details page', () => {
+      // Label/value text as scraped from amazon.co.jp's chargeSummary list
+      const raw = [
+        { label: '商品の小計：', value: '￥1,509' },
+        { label: '配送料・手数料：', value: '￥0' },
+        { label: '注文合計：', value: '￥1,509' },
+        { label: 'ご請求額：', value: '￥1,509' },
+      ];
+      const rows = raw.map(({ label, value }) => ({ label, amount: parseCurrencyAmount(value) }));
+      expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 1509, giftCardAmount: 0 });
+    });
+
     it('should report a partial Amazonギフトカード deduction', () => {
       const rows = [
         { label: '商品の小計：', amount: 5000 },
