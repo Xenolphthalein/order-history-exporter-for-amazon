@@ -164,6 +164,33 @@ describe('parseOrderStatus', () => {
     expect(parseOrderStatus('Rimborsato il 10 gennaio 2024')).toBe('Rimborsato il 10 gennaio 2024');
   });
 
+  it('should extract Japanese delivery statuses with a leading date', () => {
+    expect(parseOrderStatus('注文日\n2026年10月17日\n10月19日に配達しました\n商品名')).toBe(
+      '10月19日に配達しました'
+    );
+    expect(parseOrderStatus('2026/10/19に配達済み')).toBe('2026/10/19に配達済み');
+  });
+
+  it('should extract Japanese statuses without a date', () => {
+    expect(parseOrderStatus('配達しました')).toBe('配達しました');
+    expect(parseOrderStatus('発送済み')).toBe('発送済み');
+    expect(parseOrderStatus('キャンセル済み')).toBe('キャンセル済み');
+    expect(parseOrderStatus('返品が完了しました')).toBe('返品が完了しました');
+    expect(parseOrderStatus('明日お届け予定')).toBe('明日お届け予定');
+  });
+
+  it('should not take a long Japanese product title as a status', () => {
+    const text =
+      'ヘッダー\n配達済みの商品をまとめて管理できる収納ボックス 大容量 折りたたみ式 ホワイト 3個セット\n';
+    expect(parseOrderStatus(text)).toBe('');
+  });
+
+  it('should extract English statuses shown on amazon.co.jp', () => {
+    expect(parseOrderStatus('Order placed\nOctober 17, 2026\nDelivered 19 October')).toBe(
+      'Delivered 19 October'
+    );
+  });
+
   it('should extract Italian "In arrivo" status', () => {
     const text = 'Ordine effettuato il 7 maggio 2026\nIn arrivo\nConsegna prevista venerdì.';
     expect(parseOrderStatus(text)).toBe('In arrivo');

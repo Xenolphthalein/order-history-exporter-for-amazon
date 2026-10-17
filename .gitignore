@@ -97,3 +97,6 @@ web-ext-artifacts/
 *.pid
 *.seed
 *.pid.lock
+
+# Real Amazon page captures (personal data, never commit)
+local-fixtures/

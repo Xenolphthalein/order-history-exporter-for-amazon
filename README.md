@@ -67,6 +67,8 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
 | Belgium        | `amazon.com.be` | EUR              |
 | United Arab Emirates | `amazon.ae` | AED              |
 
+On `amazon.co.jp`, order pages are supported in both Japanese and English display languages: Japanese dates (`2026年10月17日`, `2026/10/17`), yen amounts without decimals (`￥3,480`, `¥3,480`, `3,480円`), Japanese order statuses, and the `ご請求額` / `Amazonギフトカード` rows used for Charged Amount and Gift Card Amount.
+
 ---
 
 ## Available Translations

@@ -135,6 +135,39 @@ const localeStatusConfigs: LocaleStatusConfig[] = [
   },
 ];
 
+/**
+ * Japanese status lines aren't space-separated and often lead with the date
+ * ("10月15日に配達しました", "明日お届け予定"), so they can't use the
+ * keyword-first, word-by-word pattern above. Instead, a short line that
+ * starts with an optional date/kanji prefix followed by a status keyword is
+ * returned whole.
+ */
+const japaneseStatusKeywords = [
+  '配達しました',
+  '配達済み',
+  '配達完了',
+  'お届け済み',
+  '発送しました',
+  '発送済み',
+  'お届け予定',
+  '到着予定',
+  '配達予定',
+  'キャンセルされました',
+  'キャンセル済み',
+  '返品が完了しました',
+  '返品完了',
+  '返品済み',
+  '返金しました',
+  '返金済み',
+];
+
+const JAPANESE_STATUS_MAX_LENGTH = 40;
+
+const japaneseStatusPattern = new RegExp(
+  `^[0-9０-９/:：()（）\\s\\p{Script=Han}]{0,16}?に?(?:${japaneseStatusKeywords.join('|')})`,
+  'u'
+);
+
 const blockedStatusCandidates: RegExp[] = [/^Shipped\s+and\s+sold\b/iu];
 
 function escapeRegex(value: string): string {
@@ -184,6 +217,10 @@ export function parseOrderStatus(orderText: string): string {
       if (match?.[1]) {
         return match[1].trim().substring(0, 50);
       }
+    }
+
+    if (candidate.length <= JAPANESE_STATUS_MAX_LENGTH && japaneseStatusPattern.test(candidate)) {
+      return candidate;
     }
   }
 

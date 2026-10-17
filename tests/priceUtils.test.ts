@@ -6,6 +6,8 @@ import {
   extractPriceFromText,
   extractTotalFromRows,
   summarizePaymentRows,
+  getCurrencyForDomain,
+  getAmountPattern,
   CURRENCY_TOKEN,
 } from '../src/utils/priceUtils';
 
@@ -524,5 +526,155 @@ describe('summarizePaymentRows', () => {
 
   it('should return null chargedAmount for an empty row list (order-details not fetched)', () => {
     expect(summarizePaymentRows([])).toEqual({ chargedAmount: null, giftCardAmount: 0 });
+  });
+});
+
+describe('amazon.co.jp (JPY)', () => {
+  describe('getCurrencyForDomain', () => {
+    it('should resolve JPY for amazon.co.jp hosts', () => {
+      expect(getCurrencyForDomain('www.amazon.co.jp')).toBe('JPY');
+      expect(getCurrencyForDomain('amazon.co.jp')).toBe('JPY');
+    });
+  });
+
+  describe('detectCurrency', () => {
+    it('should detect JPY from the fullwidth ￥ sign', () => {
+      expect(detectCurrency('￥3,480')).toBe('JPY');
+    });
+
+    it('should detect JPY from the 円 suffix', () => {
+      expect(detectCurrency('3,480円')).toBe('JPY');
+    });
+
+    it('should fall back to JPY on amazon.co.jp when no symbol is present', () => {
+      expect(detectCurrency('合計 3,480', 'www.amazon.co.jp')).toBe('JPY');
+    });
+  });
+
+  describe('parseCurrencyAmount', () => {
+    it('should parse yen amounts with thousands separators', () => {
+      expect(parseCurrencyAmount('￥3,480')).toBe(3480);
+      expect(parseCurrencyAmount('¥3,480')).toBe(3480);
+      expect(parseCurrencyAmount('3,480円')).toBe(3480);
+      expect(parseCurrencyAmount('￥12,345,678')).toBe(12345678);
+    });
+
+    it('should parse small yen amounts and zero', () => {
+      expect(parseCurrencyAmount('￥110')).toBe(110);
+      expect(parseCurrencyAmount('￥0')).toBe(0);
+    });
+
+    it('should keep the sign of a deduction row', () => {
+      expect(parseCurrencyAmount('-￥500')).toBe(-500);
+    });
+  });
+
+  describe('extractPriceFromText', () => {
+    it('should extract a fullwidth-yen total', () => {
+      expect(extractPriceFromText('合計 ￥3,480', 'www.amazon.co.jp')).toEqual({
+        amount: 3480,
+        currency: 'JPY',
+      });
+    });
+
+    it('should extract a halfwidth-yen total from the English site', () => {
+      expect(extractPriceFromText('Total ¥1,100', 'www.amazon.co.jp')).toEqual({
+        amount: 1100,
+        currency: 'JPY',
+      });
+    });
+
+    it('should extract a 円-suffixed total', () => {
+      expect(extractPriceFromText('ご請求額： 3,480円', 'www.amazon.co.jp')).toEqual({
+        amount: 3480,
+        currency: 'JPY',
+      });
+      expect(extractPriceFromText('3,480円', 'www.amazon.co.jp')).toEqual({
+        amount: 3480,
+        currency: 'JPY',
+      });
+    });
+  });
+
+  describe('extractTotalFromRows', () => {
+    it('should extract from a row labeled "合計"', () => {
+      const rows = [
+        { label: '注文日', value: '2026年10月17日' },
+        { label: '合計', value: '￥3,480' },
+      ];
+      expect(extractTotalFromRows(rows, 'www.amazon.co.jp')).toEqual({
+        amount: 3480,
+        currency: 'JPY',
+      });
+    });
+
+    it('should extract from a row labeled "Total" on the English site', () => {
+      const rows = [{ label: 'Total', value: '¥12,800' }];
+      expect(extractTotalFromRows(rows, 'www.amazon.co.jp')).toEqual({
+        amount: 12800,
+        currency: 'JPY',
+      });
+    });
+  });
+
+  describe('getAmountPattern', () => {
+    const yenPrice = new RegExp(`${CURRENCY_TOKEN}\\s*(${getAmountPattern('JPY')})`);
+
+    it('should capture whole yen amounts instead of truncating to two decimals', () => {
+      expect('¥1,100'.match(yenPrice)?.[1]).toBe('1,100');
+      expect('￥110'.match(yenPrice)?.[1]).toBe('110');
+      expect('￥12,345'.match(yenPrice)?.[1]).toBe('12,345');
+    });
+
+    it('should not capture part of a percentage', () => {
+      expect('¥10%オフ'.match(yenPrice)).toBeNull();
+    });
+
+    it('should keep the two-decimal pattern for other currencies', () => {
+      const euroPrice = new RegExp(`${CURRENCY_TOKEN}\\s*(${getAmountPattern('EUR')})`);
+      expect('€12,99'.match(euroPrice)?.[1]).toBe('12,99');
+      expect('€12'.match(euroPrice)).toBeNull();
+    });
+  });
+
+  describe('summarizePaymentRows', () => {
+    it('should use the final ご請求額 row as the charged amount', () => {
+      const rows = [
+        { label: '商品の小計：', amount: 3480 },
+        { label: '配送料・手数料：', amount: 0 },
+        { label: '注文合計：', amount: 3480 },
+        { label: 'ご請求額：', amount: 3480 },
+      ];
+      expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 3480, giftCardAmount: 0 });
+    });
+
+    it('should report a partial Amazonギフトカード deduction', () => {
+      const rows = [
+        { label: '商品の小計：', amount: 5000 },
+        { label: '注文合計：', amount: 5000 },
+        { label: 'Amazonギフトカード：', amount: -1200 },
+        { label: 'ご請求額：', amount: 3800 },
+      ];
+      expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 3800, giftCardAmount: 1200 });
+    });
+
+    it('should handle English labels on amazon.co.jp', () => {
+      const rows = [
+        { label: 'Item(s) Subtotal:', amount: 2000 },
+        { label: 'Total before tax:', amount: 2000 },
+        { label: 'Gift Card:', amount: -2000 },
+        { label: 'Grand Total:', amount: 0 },
+      ];
+      expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 0, giftCardAmount: 2000 });
+    });
+
+    it('should ignore a trailing 返金合計 row for a returned order', () => {
+      const rows = [
+        { label: '注文合計：', amount: 1980 },
+        { label: 'ご請求額：', amount: 1980 },
+        { label: '返金合計', amount: 1980 },
+      ];
+      expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 1980, giftCardAmount: 0 });
+    });
   });
 });

@@ -53,7 +53,33 @@ export function parsePrice(priceStr: string): number {
  * Symbols are self-delimiting and don't need word boundaries.
  */
 export const CURRENCY_TOKEN =
-  '(?:\\b(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|KR|AED)\\b|€|£|\\$|R\\$|¥|₹)';
+  '(?:\\b(?:EUR|GBP|USD|SEK|AUD|CAD|MXN|BRL|JPY|INR|KR|AED)\\b|€|£|\\$|R\\$|¥|￥|₹)';
+
+/**
+ * Japanese "yen" suffix (e.g. "3,480円"). Kept out of CURRENCY_TOKEN because
+ * it only ever follows the amount: matching it as a prefix would pair it
+ * with whatever number comes next in the text (e.g. a quantity).
+ */
+const YEN_SUFFIX = '円';
+
+/**
+ * Currencies whose amounts Amazon shows without decimals (e.g. "￥1,100").
+ */
+const ZERO_DECIMAL_CURRENCIES = new Set(['JPY']);
+
+/**
+ * Regex source for the numeric part of a price in the given currency.
+ * Most currencies require two decimals ("12,99", "12.99"); zero-decimal
+ * currencies take whole amounts with optional thousands separators
+ * ("1,100", "110"), which the two-decimal pattern would truncate to "1,10".
+ * The trailing lookahead keeps it from matching part of a longer number or
+ * a percentage (e.g. "10%" in "10%オフ").
+ */
+export function getAmountPattern(currency: string): string {
+  return ZERO_DECIMAL_CURRENCIES.has(currency)
+    ? '(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?![0-9,%％])'
+    : '[0-9]+[.,][0-9]{2}';
+}
 
 /**
  * Map of Amazon domains to their default currencies.
@@ -105,7 +131,12 @@ export function detectCurrency(text: string, hostname?: string): string {
     return 'GBP';
   } else if (text.includes('R$') || text.includes('BRL')) {
     return 'BRL';
-  } else if (text.includes('¥') || text.includes('JPY')) {
+  } else if (
+    text.includes('¥') ||
+    text.includes('￥') ||
+    text.includes(YEN_SUFFIX) ||
+    text.includes('JPY')
+  ) {
     return 'JPY';
   } else if (text.includes('₹') || text.includes('INR')) {
     return 'INR';
@@ -141,7 +172,12 @@ export function detectCurrency(text: string, hostname?: string): string {
  * currency symbol or code (e.g. "EUR 40,00", "-19,10 €", "R$ 40,00").
  */
 export function parseCurrencyAmount(text: string): number {
-  return parsePrice(text.replace(new RegExp(CURRENCY_TOKEN, 'gi'), '').trim());
+  return parsePrice(
+    text
+      .replace(new RegExp(CURRENCY_TOKEN, 'gi'), '')
+      .replace(new RegExp(YEN_SUFFIX, 'g'), '')
+      .trim()
+  );
 }
 
 /**
@@ -157,13 +193,15 @@ export function extractPriceFromText(
   const pricePatterns = [
     // Labeled totals with optional currency prefix/suffix (e.g. "Total: $12.99")
     new RegExp(
-      `(?:Summe|Gesamtsumme|Gesamt|Total|Totale|Totalt|Summa)[:\\s]*${CT}?\\s*([0-9][0-9.,]*)\\s*${CT}?`,
+      `(?:Summe|Gesamtsumme|Gesamt|Total|Totale|Totalt|Summa|ご請求額|合計)[:：\\s]*${CT}?\\s*([0-9][0-9.,]*)\\s*(?:${CT}|${YEN_SUFFIX})?`,
       'gi'
     ),
     // Currency-prefixed amounts (e.g. "$ 29.99", "EUR 12,99")
     new RegExp(`${CT}\\s*([0-9][0-9.,]*)`, 'gi'),
     // Currency-suffixed amounts (e.g. "199,00 kr", "12.99 EUR")
     new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CT}`, 'gi'),
+    // Yen-suffixed amounts without decimals (e.g. "3,480円")
+    new RegExp(`([0-9][0-9,]*)\\s*${YEN_SUFFIX}`, 'g'),
   ];
 
   for (const pattern of pricePatterns) {
@@ -189,7 +227,8 @@ export function extractPriceFromText(
  * with the generic "Total" (e.g. Italian "Totale") are matched without
  * needing to enumerate every inflection.
  */
-const TOTAL_LABEL_PATTERN = /^(total|totale|summe|gesamt|totalt|summa)\b/i;
+const TOTAL_LABEL_PATTERN =
+  /^(?:(?:total|totale|summe|gesamt|totalt|summa)\b|合計|注文合計|ご請求額)/i;
 
 /**
  * Extract the order total from label/value row pairs scraped from the order
@@ -219,12 +258,12 @@ export function extractTotalFromRows(
 
 /**
  * Matches gift-card line-item labels across supported locales (the ones
- * already used elsewhere in this codebase: de, en, fr, sv, es, it). Amazon's
+ * already used elsewhere in this codebase: de, en, fr, sv, es, it, ja). Amazon's
  * order-details "charge summary" lists a deduction row like "Importo Buono
  * Regalo: -19,10 €" when a gift card covers part or all of an order.
  */
 const GIFT_CARD_LABEL_PATTERN =
-  /(gift\s*card|geschenkgutschein|ch[eè]que[\s-]?cadeau|carte[\s-]?cadeau|presentkort|tarjeta\s*(de\s*)?regalo|cheque\s*regalo|buono\s*regalo)/i;
+  /(gift\s*card|geschenkgutschein|ch[eè]que[\s-]?cadeau|carte[\s-]?cadeau|presentkort|tarjeta\s*(de\s*)?regalo|cheque\s*regalo|buono\s*regalo|ギフトカード|ギフト券)/i;
 
 /**
  * Matches a trailing "total refund" row across locales. When an order was
@@ -234,7 +273,7 @@ const GIFT_CARD_LABEL_PATTERN =
  * charged amount.
  */
 const REFUND_TOTAL_LABEL_PATTERN =
-  /(total\s*refund|r[uü]ckerstattungsbetrag|montant\s*rembours[eé]|[aå]terbetalt\s*belopp|importe\s*reembolsado|totale\s*rimborso)/i;
+  /(total\s*refund|r[uü]ckerstattungsbetrag|montant\s*rembours[eé]|[aå]terbetalt\s*belopp|importe\s*reembolsado|totale\s*rimborso|返金合計|返金額|返金総額)/i;
 
 /**
  * Summarize the order-details "charge summary" rows (Amazon's
