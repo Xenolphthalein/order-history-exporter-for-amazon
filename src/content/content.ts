@@ -24,6 +24,7 @@ import {
   convertOrdersToCSV,
   extractOrderId,
   extractOrderIdFromUrl,
+  ORDER_ID_PATTERN,
   extractPriceFromText,
   extractTotalFromRows,
   summarizePaymentRows,
@@ -514,7 +515,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
 
     // Fallback: find elements containing order IDs
     if (orderElements.length === 0) {
-      const orderIdPattern = /\d{3}-\d{7}-\d{7}/;
+      const orderIdPattern = new RegExp(ORDER_ID_PATTERN);
       const potentialOrders = new Set<Element>();
 
       document.querySelectorAll('*').forEach((el) => {

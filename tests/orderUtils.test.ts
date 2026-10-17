@@ -112,6 +112,10 @@ describe('extractOrderId', () => {
     expect(extractOrderId('Order #123-456')).toBeNull();
   });
 
+  it('should extract a digital order ID (D01- prefix)', () => {
+    expect(extractOrderId('注文番号 D01-1234567-7654321')).toBe('D01-1234567-7654321');
+  });
+
   it('should extract first order ID if multiple present', () => {
     expect(extractOrderId('Orders: 123-4567890-1234567 and 987-6543210-9876543')).toBe(
       '123-4567890-1234567'
@@ -120,6 +124,14 @@ describe('extractOrderId', () => {
 });
 
 describe('extractOrderIdFromUrl', () => {
+  it('should extract a digital order ID (D01- prefix)', () => {
+    expect(
+      extractOrderIdFromUrl(
+        'https://www.amazon.co.jp/gp/css/order-details?orderID=D01-1234567-7654321'
+      )
+    ).toBe('D01-1234567-7654321');
+  });
+
   it('should extract from orderID parameter (lowercase D)', () => {
     expect(
       extractOrderIdFromUrl('https://amazon.de/order-details?orderId=123-4567890-1234567')
