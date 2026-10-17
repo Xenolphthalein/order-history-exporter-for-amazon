@@ -185,6 +185,17 @@ describe('parseOrderStatus', () => {
     expect(parseOrderStatus(text)).toBe('');
   });
 
+  it('should not treat the return-window line as a Japanese status', () => {
+    const text = '注文日\n2026年2月27日\n返品期間：2026年4月3日まで\nもう一度買う';
+    expect(parseOrderStatus(text)).toBe('');
+  });
+
+  it('should not treat the English return-window line as a status', () => {
+    const text =
+      'Order placed\nFebruary 27, 2026\nReturn window closed on April 3, 2026\nBuy it again';
+    expect(parseOrderStatus(text)).toBe('');
+  });
+
   it('should extract English statuses shown on amazon.co.jp', () => {
     expect(parseOrderStatus('Order placed\nOctober 17, 2026\nDelivered 19 October')).toBe(
       'Delivered 19 October'
