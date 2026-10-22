@@ -41,6 +41,7 @@ Browser extension for exporting your Amazon order history to JSON or CSV format.
 - **Multiple Formats** — Export as JSON or CSV
 - **Cancellable Exports** — Stop an export while it is in progress
 - **Transaction Details** — Optionally include the actual charged amount and transaction date per order, sourced from Amazon's payments page (not the pre-tax subtotal)
+- **Invoice PDF Download** — Optionally save the invoice PDF of each order to your Downloads folder
 - **Privacy Focused** — No tracking or data collection; all processing happens locally
 - **Open Source** — Free to use and modify
 
@@ -125,8 +126,9 @@ The built extensions will be in browser-specific directories:
 3. Click the extension icon in the toolbar
 4. Select your export options (date range, format)
 5. Optionally check **Include transaction details** to add the actual charged amount and transaction date to each order — this fetches one extra page per order so exports will take longer
-6. Click "Export" to download your order history
-7. To cancel an export in progress, reopen the popup and click "Stop Export"
+6. Optionally check **Download invoice PDFs** to save each order's invoice PDF to `amazon-invoices/` in your Downloads folder (adds one extra page fetch per order, so exports take longer). Multi-shipment orders are suffixed `_1`, `_2`, ... to keep filenames unique. On Chrome the download shelf is temporarily hidden during the export so it isn't flooded; Firefox has no equivalent API and the panel behaves normally.
+7. Click "Export" to download your order history
+8. To cancel an export in progress, reopen the popup and click "Stop Export"
 
 ---
 

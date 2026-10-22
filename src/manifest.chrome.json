@@ -9,7 +9,7 @@
     "96": "icons/icon-96.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["activeTab", "downloads", "storage"],
+  "permissions": ["activeTab", "downloads", "downloads.ui", "storage"],
   "host_permissions": [
     "*://*.amazon.com/*",
     "*://*.amazon.co.uk/*",

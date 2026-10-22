@@ -34,8 +34,11 @@ import {
   parseOrderStatus,
   buildTransactionUrl,
   buildTransactionsFromCPEEntries,
+  isPdfInvoiceHref,
+  downloadInvoicesForOrder,
 } from '../utils';
-import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
+import type { DownloadResponse } from '../utils';
+import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../constants';
 
 (function (): void {
   'use strict';
@@ -101,6 +104,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       if (typeof state.includeTransactions !== 'boolean') {
         state.includeTransactions = false;
       }
+      // Backward-compat default: older sessions may lack this field.
+      if (typeof state.downloadInvoices !== 'boolean') {
+        state.downloadInvoices = false;
+      }
       return state;
     } catch {
       return null;
@@ -165,7 +172,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     // Reset stop flag for fresh export
     stopRequested = false;
 
-    const { format, startDate, endDate, exportAll, includeTransactions } = options;
+    const { format, startDate, endDate, exportAll, includeTransactions, downloadInvoices } =
+      options;
 
     // Get available years
     const years = getAvailableYears();
@@ -191,6 +199,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
       endDate: endDate,
       exportAll: exportAll,
       includeTransactions,
+      downloadInvoices: downloadInvoices,
       yearsToProcess: yearsToProcess,
       currentYearIndex: 0,
       currentStartIndex: 0,
@@ -323,8 +332,23 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
         : getMessage('fetchingPrices', [String(state.collectedOrders.length)])
     );
 
-    // Fetch item prices (and optionally transaction details) for all orders
-    await fetchOrderDetailsForPrices(state.collectedOrders, state.includeTransactions);
+    // `finally` guarantees the shelf is restored even on stop or throw.
+    // Otherwise Chrome would keep hiding the user's later manual downloads.
+    if (state.downloadInvoices) {
+      await setDownloadsUIEnabled(false);
+    }
+    try {
+      // Fetch item prices (and optionally transaction details and invoice PDFs)
+      await fetchOrderDetailsForPrices(
+        state.collectedOrders,
+        state.includeTransactions,
+        state.downloadInvoices
+      );
+    } finally {
+      if (state.downloadInvoices) {
+        await setDownloadsUIEnabled(true);
+      }
+    }
 
     // Check if stop was requested during price fetching (state already cleared by handler)
     if (stopRequested || !getExportState()) {
@@ -956,7 +980,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
    */
   async function fetchOrderDetailsForPrices(
     orders: Order[],
-    includeTransactions: boolean
+    includeTransactions: boolean,
+    downloadInvoices: boolean
   ): Promise<void> {
     const ordersNeedingDetails = orders.filter((order) => order.detailsUrl);
 
@@ -1041,6 +1066,32 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
           }
         }
 
+        // The order-details page only holds an AJAX trigger. The real
+        // PDF link lives in the invoice popover, so we fetch that too.
+        if (downloadInvoices && order.orderId) {
+          let orderOrigin = '';
+          try {
+            orderOrigin = new URL(order.detailsUrl).origin;
+          } catch {
+            console.warn(
+              '[Amazon Exporter] Could not derive origin from detailsUrl for order:',
+              order.orderId
+            );
+          }
+          if (orderOrigin) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            try {
+              await downloadInvoicePdfsForOrder(order.orderId, orderOrigin);
+            } catch (invoiceError) {
+              console.warn(
+                '[Amazon Exporter] Error downloading invoices for order:',
+                order.orderId,
+                invoiceError
+              );
+            }
+          }
+        }
+
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
         console.warn('[Amazon Exporter] Error fetching details:', error);
@@ -1085,6 +1136,59 @@ import { STORAGE_KEY, STOP_FLAG_KEY } from '../constants';
     }
 
     return buildTransactionsFromCPEEntries(entries, hostname);
+  }
+
+  /**
+   * Runs best-effort: a failure on one order doesn't abort the export.
+   */
+  async function downloadInvoicePdfsForOrder(orderId: string, origin: string): Promise<void> {
+    await downloadInvoicesForOrder(orderId, origin, INVOICE_DOWNLOAD_SUBFOLDER, {
+      async fetchPdfHrefs(popoverUrl) {
+        const response = await fetch(popoverUrl, { credentials: 'include' });
+        if (!response.ok) {
+          console.warn(
+            `[Amazon Exporter] Invoice popover fetch failed for ${orderId}: HTTP ${response.status}`
+          );
+          return null;
+        }
+        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        return extractInvoicePdfHrefs(doc);
+      },
+      isStopRequested: () => stopRequested || !getExportState(),
+      download: (data) =>
+        browser.runtime.sendMessage({ action: 'downloadInvoiceUrl', data }) as Promise<
+          DownloadResponse | undefined
+        >,
+      warn: (...args) => console.warn(...args),
+    });
+  }
+
+  /**
+   * Ask the background page to show or hide Chrome's download shelf.
+   * Best-effort: failures are logged, not surfaced to the user, since a
+   * cosmetic UI toggle should never abort the export itself.
+   */
+  async function setDownloadsUIEnabled(enabled: boolean): Promise<void> {
+    try {
+      await browser.runtime.sendMessage({
+        action: 'setDownloadsUIEnabled',
+        data: { enabled },
+      });
+    } catch (error) {
+      console.warn('[Amazon Exporter] Failed to toggle downloads UI:', error);
+    }
+  }
+
+  function extractInvoicePdfHrefs(doc: Document): string[] {
+    // Prefer `.invoice-list` (present in every popover sample) but fall
+    // back to the whole doc so a markup tweak doesn't silently break us.
+    const scope: ParentNode = doc.querySelector('.invoice-list') ?? doc;
+    const hrefs: string[] = [];
+    for (const a of scope.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') || '';
+      if (isPdfInvoiceHref(href)) hrefs.push(href);
+    }
+    return hrefs;
   }
 
   /**

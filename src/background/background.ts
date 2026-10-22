@@ -4,7 +4,9 @@
  */
 
 import browser from 'webextension-polyfill';
-import type { DownloadData, MessagePayload } from '../types';
+import type { DownloadData, DownloadUrlData, MessagePayload } from '../types';
+import { DOWNLOADS_UI_OWNER_KEY } from '../constants';
+import { createDownloadsUiGuard } from '../utils/downloadsUiGuard';
 
 /**
  * Get localized message from browser i18n API
@@ -13,13 +15,57 @@ function getMessage(key: string, substitutions?: string | string[]): string {
   return browser.i18n.getMessage(key, substitutions) || key;
 }
 
+const downloadsUiGuard = createDownloadsUiGuard({
+  setUiEnabled: setDownloadsUIEnabled,
+  async getOwnerTabId() {
+    const stored = await browser.storage.session.get(DOWNLOADS_UI_OWNER_KEY);
+    const tabId = stored[DOWNLOADS_UI_OWNER_KEY];
+    return typeof tabId === 'number' ? tabId : undefined;
+  },
+  async setOwnerTabId(tabId) {
+    if (tabId === undefined) {
+      await browser.storage.session.remove(DOWNLOADS_UI_OWNER_KEY);
+    } else {
+      await browser.storage.session.set({ [DOWNLOADS_UI_OWNER_KEY]: tabId });
+    }
+  },
+});
+
+// Restore the download UI if the exporting tab is closed or navigates away
+// mid-export: its content script dies before it can restore the UI itself.
+browser.tabs.onRemoved.addListener((tabId) => {
+  downloadsUiGuard.handleTabGone(tabId).catch((error: unknown) => {
+    console.warn('[Amazon Exporter] Failed to restore downloads UI:', error);
+  });
+});
+browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status !== 'loading') return;
+  downloadsUiGuard.handleTabGone(tabId).catch((error: unknown) => {
+    console.warn('[Amazon Exporter] Failed to restore downloads UI:', error);
+  });
+});
+
 // Listen for messages from content scripts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-browser.runtime.onMessage.addListener((message: any, _sender: any) => {
+browser.runtime.onMessage.addListener((message: any, sender: any) => {
   const msg = message as MessagePayload;
 
   if (msg.action === 'downloadFile') {
     return downloadFile(msg.data as DownloadData)
+      .then(() => ({ success: true }))
+      .catch((error: Error) => ({ success: false, error: error.message }));
+  }
+
+  if (msg.action === 'downloadInvoiceUrl') {
+    return downloadInvoiceUrl(msg.data as DownloadUrlData)
+      .then(() => ({ success: true }))
+      .catch((error: Error) => ({ success: false, error: error.message }));
+  }
+
+  if (msg.action === 'setDownloadsUIEnabled') {
+    const enabled = Boolean((msg.data as { enabled?: boolean } | undefined)?.enabled);
+    const tabId = (sender as browser.Runtime.MessageSender | undefined)?.tab?.id;
+    return (enabled ? downloadsUiGuard.restore() : downloadsUiGuard.suppress(tabId))
       .then(() => ({ success: true }))
       .catch((error: Error) => ({ success: false, error: error.message }));
   }
@@ -77,6 +123,35 @@ async function downloadFile(data: DownloadData): Promise<number> {
     }
     throw error;
   }
+}
+
+/**
+ * Download an invoice PDF from an Amazon URL, letting the browser reuse
+ * the user's session cookies for authentication. Silent (no Save-As
+ * prompt) since one export can queue dozens of invoices; conflicts are
+ * uniquified so re-runs of the same order don't overwrite prior files.
+ */
+async function downloadInvoiceUrl(data: DownloadUrlData): Promise<number> {
+  return browser.downloads.download({
+    url: data.url,
+    filename: data.fileName,
+    saveAs: false,
+    conflictAction: 'uniquify',
+  });
+}
+
+/**
+ * Toggle Chrome's download shelf/bubble so a bulk invoice export doesn't
+ * spam the UI. Requires the `downloads.ui` permission (Chrome only).
+ * Firefox lacks this API, so we silently no-op. Only call through
+ * `downloadsUiGuard`, which restores the UI if the exporting tab goes away.
+ */
+async function setDownloadsUIEnabled(enabled: boolean): Promise<void> {
+  const api = browser.downloads as typeof browser.downloads & {
+    setUiOptions?: (options: { enabled: boolean }) => Promise<void>;
+  };
+  if (typeof api.setUiOptions !== 'function') return;
+  await api.setUiOptions({ enabled });
 }
 
 // Log when extension is installed or updated
