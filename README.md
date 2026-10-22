@@ -95,7 +95,7 @@ The extension interface is available in these languages:
 
 ### From Source
 
-Requires Node.js 20+.
+Use Node.js 22.12 or later in the 22.x series. CI and release builds use Node.js 22.
 
 ```bash
 # Clone the repository

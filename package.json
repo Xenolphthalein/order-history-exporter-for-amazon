@@ -39,7 +39,7 @@
     "@types/webextension-polyfill": "^0.12.5",
     "@typescript-eslint/eslint-plugin": "^8.61.1",
     "@typescript-eslint/parser": "^8.61.1",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^5.0.5",
     "esbuild": "^0.28.1",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
@@ -47,7 +47,7 @@
     "knip": "^6.17.1",
     "prettier": "^3.8.4",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "webextension-polyfill": "0.12.0"
