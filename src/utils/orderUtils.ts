@@ -42,10 +42,17 @@ export function isAdvertisementOrder(order: Order): boolean {
 }
 
 /**
+ * Regex source for an Amazon order ID: "123-4567890-1234567" for physical
+ * orders, or "D01-4567890-1234567" for digital orders (Prime Video, Kindle,
+ * etc.).
+ */
+export const ORDER_ID_PATTERN = '(?:\\d{3}|D\\d{2})-\\d{7}-\\d{7}';
+
+/**
  * Extract order ID from text
  */
 export function extractOrderId(text: string): string | null {
-  const orderIdMatch = text.match(/\d{3}-\d{7}-\d{7}/);
+  const orderIdMatch = text.match(new RegExp(ORDER_ID_PATTERN));
   return orderIdMatch?.[0] || null;
 }
 
@@ -53,6 +60,6 @@ export function extractOrderId(text: string): string | null {
  * Extract order ID from URL
  */
 export function extractOrderIdFromUrl(url: string): string | null {
-  const urlMatch = url.match(/orderI[Dd]=(\d{3}-\d{7}-\d{7})/i);
+  const urlMatch = url.match(new RegExp(`orderI[Dd]=(${ORDER_ID_PATTERN})`, 'i'));
   return urlMatch?.[1] || null;
 }
