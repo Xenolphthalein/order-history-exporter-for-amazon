@@ -333,6 +333,84 @@ describe('parseOrderDateFromRows', () => {
   });
 });
 
+describe('Japanese dates (amazon.co.jp)', () => {
+  it('should parse "2026年10月17日"', () => {
+    expect(parseDate('2026年10月17日')).toBe('2026-10-17');
+  });
+
+  it('should parse single-digit months and days', () => {
+    expect(parseDate('2026年1月5日')).toBe('2026-01-05');
+  });
+
+  it('should parse spaced units "2026 年 10 月 17 日"', () => {
+    expect(parseDate('2026 年 10 月 17 日')).toBe('2026-10-17');
+  });
+
+  it('should parse slash dates "2026/10/17"', () => {
+    expect(parseDate('2026/10/17')).toBe('2026-10-17');
+    expect(parseDate('2026/1/5')).toBe('2026-01-05');
+  });
+
+  it('should reject out-of-range months', () => {
+    expect(parseDate('2026年13月1日')).toBeNull();
+  });
+
+  it('should extract the order date from Japanese order card text', () => {
+    const text = '注文日\n2026年10月17日\n合計\n￥3,480\nお届け先\n山田 太郎';
+    expect(parseOrderDate(text)).toBe('2026-10-17');
+  });
+
+  it('should take the order date, not the return-window date, from a real card layout', () => {
+    // Line structure of an amazon.co.jp order card (anonymized)
+    const text = [
+      '注文日',
+      '2026年2月27日',
+      '合計',
+      '￥1,509',
+      '注文番号',
+      '000-0000000-0000000',
+      '注文内容を表示',
+      'Sample Sparkling Water 500 ml x 24',
+      '返品期間：2026年4月3日まで',
+      'もう一度買う',
+    ].join('\n');
+    expect(parseOrderDate(text)).toBe('2026-02-27');
+  });
+
+  it('should take the order date, not the return-window date, from an English amazon.co.jp card', () => {
+    // Line structure of an amazon.co.jp order card in English display (anonymized)
+    const text = [
+      'Order placed',
+      'February 27, 2026',
+      'Total',
+      '¥1,509',
+      'Order #',
+      '000-0000000-0000000',
+      'View order details',
+      'Sample Sparkling Water 500 ml x 24',
+      'Return window closed on April 3, 2026',
+      'Buy it again',
+    ].join('\n');
+    expect(parseOrderDate(text)).toBe('2026-02-27');
+  });
+
+  it('should extract a labeled slash date', () => {
+    expect(parseOrderDate('注文日： 2026/10/17')).toBe('2026-10-17');
+  });
+
+  it('should extract the English-site date on amazon.co.jp', () => {
+    expect(parseOrderDate('Order placed\nOctober 17, 2026\nTotal\n¥3,480')).toBe('2026-10-17');
+  });
+
+  it('should extract the date from Japanese header rows', () => {
+    const rows = [
+      { label: '合計', value: '￥3,480' },
+      { label: '注文日', value: '2026年10月17日' },
+    ];
+    expect(parseOrderDateFromRows(rows)).toBe('2026-10-17');
+  });
+});
+
 describe('extractOrderYear', () => {
   it('should extract year from timeFilter text', () => {
     expect(extractOrderYear('timeFilter=year-2024')).toBe('2024');

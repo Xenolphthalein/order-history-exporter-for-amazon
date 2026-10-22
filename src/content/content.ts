@@ -31,6 +31,7 @@ import {
   parsePrice,
   parseCurrencyAmount,
   CURRENCY_TOKEN,
+  getAmountPattern,
   getCurrencyForDomain,
   parseOrderStatus,
   buildTransactionUrl,
@@ -483,6 +484,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
       'a[aria-label*="Nästa"]',
       'a[aria-label*="Next"]',
       'a[aria-label*="Siguiente"]',
+      'a[aria-label*="次"]',
       '.a-pagination li:last-child:not(.a-disabled) a',
       'a.a-last:not(.a-disabled)',
     ];
@@ -957,7 +959,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
       if (!foundQuantity && itemRow) {
         const nonTitleText = itemRow.textContent?.replace(item.title, '') || '';
         const qtyMatch = nonTitleText.match(
-          /(?:Qty|Quantity|Menge|Anzahl|Antal|Cantidad|Cant\.?)[:\s]*(\d+)/i
+          /(?:Qty|Quantity|Menge|Anzahl|Antal|Cantidad|Cant\.?|数量)[:：\s]*(\d+)/i
         );
         if (qtyMatch?.[1]) {
           const parsedQty = parseInt(qtyMatch[1], 10);
@@ -1197,6 +1199,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
    */
   function parseItemPricesFromDetails(order: Order, doc: Document): void {
     const asinPriceMap = new Map<string, number>();
+    const amount = getAmountPattern(order.currency);
 
     // Look for product containers with prices
     // Amazon order details page typically has items in table rows or specific containers
@@ -1218,8 +1221,8 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
 
       // Try multiple price patterns - look for the item price specifically
       const pricePatterns = [
-        new RegExp(`${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'gi'),
-        new RegExp(`([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}`, 'gi'),
+        new RegExp(`${CURRENCY_TOKEN}\\s*(${amount})`, 'gi'),
+        new RegExp(`(${amount})\\s*(?:${CURRENCY_TOKEN}|円)`, 'gi'),
       ];
 
       for (const pattern of pricePatterns) {
@@ -1251,7 +1254,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
         // Look for item-specific discounts
         const discountMatch = rowText.match(
           new RegExp(
-            `(Rabatt|Nachlass|Ersparnis|Discount|Coupon)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
+            `(Rabatt|Nachlass|Ersparnis|Discount|Coupon|割引|クーポン)[:：\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*(${amount})`,
             'i'
           )
         );
@@ -1280,10 +1283,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
 
       itemsWithoutPrice.forEach((item) => {
         // Look for price near the ASIN in the document
-        const asinRegex = new RegExp(
-          `${item.asin}[^€£$]*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`,
-          'i'
-        );
+        const asinRegex = new RegExp(`${item.asin}[^€£$¥￥]*${CURRENCY_TOKEN}\\s*(${amount})`, 'i');
         const match = pageText.match(asinRegex);
         if (match?.[1]) {
           const price = parsePrice(match[1]);
@@ -1301,6 +1301,7 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
   function parsePromotionsFromDetails(order: Order, doc: Document): void {
     const promotions: Promotion[] = [];
     let totalSavings = 0;
+    const amount = getAmountPattern(order.currency);
 
     // Look for various discount/promotion patterns in the order details
     const promotionSelectors = [
@@ -1324,11 +1325,11 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
         // Look for savings/discount amounts
         const savingsPatterns = [
           new RegExp(
-            `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n)[:\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})`,
+            `(?:Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n|割引|クーポン)[:：\\s]*-?\\s*${CURRENCY_TOKEN}?\\s*(${amount})`,
             'i'
           ),
-          new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*([0-9]+[.,][0-9]{2})`, 'i'),
-          new RegExp(`${CURRENCY_TOKEN}\\s*-\\s*([0-9]+[.,][0-9]{2})`, 'i'),
+          new RegExp(`-\\s*${CURRENCY_TOKEN}\\s*(${amount})`, 'i'),
+          new RegExp(`${CURRENCY_TOKEN}\\s*-\\s*(${amount})`, 'i'),
         ];
 
         for (const pattern of savingsPatterns) {
@@ -1366,15 +1367,12 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
 
         // Look for promotion lines
         if (
-          /Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n/i.test(
+          /Rabatt|Nachlass|Ersparnis|Savings?|Discount|Gutschein|Coupon|Angebot|Descuento|Ahorro|Cup[oó]n|Promoci[oó]n|割引|クーポン/i.test(
             text
           )
         ) {
           const amountMatch = text.match(
-            new RegExp(
-              `-?\\s*${CURRENCY_TOKEN}?\\s*([0-9]+[.,][0-9]{2})\\s*${CURRENCY_TOKEN}?`,
-              'i'
-            )
+            new RegExp(`-?\\s*${CURRENCY_TOKEN}?\\s*(${amount})\\s*${CURRENCY_TOKEN}?`, 'i')
           );
           if (amountMatch?.[1]) {
             const amount = parsePrice(amountMatch[1]);

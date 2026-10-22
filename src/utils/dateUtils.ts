@@ -116,7 +116,15 @@ const spanishMonthNames =
 const italianMonthNames =
   'gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre';
 
+// Japanese: "2026年10月17日" (also with spaces around the units)
+const japaneseDatePattern = '\\d{4}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日';
+
 const orderDatePatterns: RegExp[] = [
+  new RegExp(
+    `(?:注文日|注文確定日)[:：\\s]*(${japaneseDatePattern}|\\d{4}/\\d{1,2}/\\d{1,2})`,
+    'u'
+  ),
+  new RegExp(`(${japaneseDatePattern})`, 'u'),
   new RegExp(
     `(?:Bestellt am|Bestellung aufgegeben am)\\s+(\\d{1,2}\\.?\\s*(?:${germanMonthNames})\\s+\\d{4})\\b`,
     'iu'
@@ -173,15 +181,36 @@ function getDateCandidates(orderText: string): string[] {
   return byChunk.length > 0 ? byChunk : [normalized.replace(/\s+/g, ' ').trim()];
 }
 
+function toIsoDate(year: number, month: number, day: number): string | null {
+  if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /**
  * Parse date string to ISO format (YYYY-MM-DD)
  * Supports German format "15. Januar 2024", English format "January 15, 2024",
- * "15 January 2024", and French format "15 janvier 2024".
+ * "15 January 2024", French format "15 janvier 2024", and Japanese formats
+ * "2024年1月15日" and "2024/01/15".
  */
 export function parseDate(dateText: string): string | null {
   if (!dateText) return null;
 
   const cleanText = dateText.trim().toLowerCase();
+
+  // Japanese numeric dates are year-first, so they're checked before the
+  // month-name formats below.
+  const japaneseMatch =
+    cleanText.match(/(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/u) ||
+    cleanText.match(/(?<!\d)(\d{4})\/(\d{1,2})\/(\d{1,2})(?!\d)/);
+  if (japaneseMatch) {
+    return toIsoDate(
+      parseInt(japaneseMatch[1] || '0', 10),
+      parseInt(japaneseMatch[2] || '0', 10),
+      parseInt(japaneseMatch[3] || '0', 10)
+    );
+  }
 
   // Handle Spanish "de" filler: "27 de junio de 2026" → "27 junio 2026"
   // Only apply when the text contains a Spanish month name to avoid
