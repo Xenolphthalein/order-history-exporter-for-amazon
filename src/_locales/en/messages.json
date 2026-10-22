@@ -47,6 +47,14 @@
     "message": "Export Orders",
     "description": "Export button text"
   },
+  "downloadInvoices": {
+    "message": "Download invoice PDFs",
+    "description": "Checkbox label to auto-download the invoice PDF of each order"
+  },
+  "downloadInvoicesHint": {
+    "message": "Saves one PDF per order to your Downloads folder (slower)",
+    "description": "Hint text below the download invoices checkbox"
+  },
   "stopExport": {
     "message": "Stop Export",
     "description": "Stop button text"

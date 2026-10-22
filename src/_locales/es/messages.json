@@ -47,6 +47,14 @@
     "message": "Exportar pedidos",
     "description": "Export button text"
   },
+  "downloadInvoices": {
+    "message": "Descargar facturas en PDF",
+    "description": "Checkbox label to auto-download the invoice PDF of each order"
+  },
+  "downloadInvoicesHint": {
+    "message": "Guarda un PDF por pedido en tu carpeta de Descargas (más lento)",
+    "description": "Hint text below the download invoices checkbox"
+  },
   "stopExport": {
     "message": "Detener exportación",
     "description": "Stop button text"

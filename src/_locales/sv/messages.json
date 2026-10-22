@@ -47,6 +47,14 @@
     "message": "Exportera beställningar",
     "description": "Export button text"
   },
+  "downloadInvoices": {
+    "message": "Ladda ner fakturor som PDF",
+    "description": "Checkbox label to auto-download the invoice PDF of each order"
+  },
+  "downloadInvoicesHint": {
+    "message": "Sparar en PDF per beställning i din Nedladdningar-mapp (långsammare)",
+    "description": "Hint text below the download invoices checkbox"
+  },
   "stopExport": {
     "message": "Stoppa export",
     "description": "Stop button text"

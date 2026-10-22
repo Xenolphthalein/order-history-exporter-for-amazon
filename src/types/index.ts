@@ -50,6 +50,7 @@ export interface ExportOptions {
   endDate: string | null;
   exportAll: boolean;
   includeTransactions: boolean;
+  downloadInvoices: boolean;
 }
 
 export interface ExportState {
@@ -59,6 +60,7 @@ export interface ExportState {
   endDate: string | null;
   exportAll: boolean;
   includeTransactions: boolean;
+  downloadInvoices: boolean;
   yearsToProcess: string[];
   currentYearIndex: number;
   currentStartIndex: number;
@@ -71,6 +73,11 @@ export interface DownloadData {
   content: string;
   fileName: string;
   mimeType: string;
+}
+
+export interface DownloadUrlData {
+  url: string;
+  fileName: string;
 }
 
 export interface MessagePayload {
