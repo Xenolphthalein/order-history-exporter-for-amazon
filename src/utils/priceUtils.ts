@@ -267,13 +267,14 @@ const GIFT_CARD_LABEL_PATTERN =
 
 /**
  * Matches a trailing "total refund" row across locales. When an order was
- * returned, Amazon appends this row (e.g. "Totale rimborso: 23,19 €") after
+ * returned, Amazon appends this row (e.g. "Totale rimborso: 23,19 €", German
+ * "Summe der Erstattung" or "Rückerstattungsbetrag") after
  * the normal charge-summary rows — it describes what was refunded, not what
  * was charged, and must be excluded before picking the "last row" as the
  * charged amount.
  */
 const REFUND_TOTAL_LABEL_PATTERN =
-  /(total\s*refund|r[uü]ckerstattungsbetrag|montant\s*rembours[eé]|[aå]terbetalt\s*belopp|importe\s*reembolsado|totale\s*rimborso|返金合計|返金額|返金総額)/i;
+  /(total\s*refund|erstattung|montant\s*rembours[eé]|[aå]terbetalt\s*belopp|importe\s*reembolsado|totale\s*rimborso|返金合計|返金額|返金総額)/i;
 
 /**
  * Summarize the order-details "charge summary" rows (Amazon's

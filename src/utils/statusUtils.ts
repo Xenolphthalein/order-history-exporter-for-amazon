@@ -12,7 +12,7 @@ type LocaleStatusConfig = {
 const localeStatusConfigs: LocaleStatusConfig[] = [
   {
     locale: 'de',
-    keywords: ['Zugestellt', 'Geliefert', 'Storniert'],
+    keywords: ['Zugestellt', 'Geliefert', 'Storniert', 'Erstattet', 'Rücksendung abgeschlossen'],
   },
   {
     locale: 'en',
