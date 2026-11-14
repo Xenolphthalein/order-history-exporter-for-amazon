@@ -175,6 +175,20 @@
     "message": "Export stopped by user.",
     "description": "Status message when export is stopped"
   },
+  "exportStoppedPartial": {
+    "message": "Export stopped. $COUNT$ orders saved, details processed for $DETAILS$.",
+    "description": "Status message when export is stopped during detail fetching and the orders collected so far are downloaded",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1618"
+      },
+      "details": {
+        "content": "$2",
+        "example": "45"
+      }
+    }
+  },
   "exportComplete": {
     "message": "Export complete! $COUNT$ orders exported.",
     "description": "Completion message with order count",

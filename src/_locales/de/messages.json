@@ -175,6 +175,20 @@
     "message": "Export vom Benutzer abgebrochen.",
     "description": "Status message when export is stopped"
   },
+  "exportStoppedPartial": {
+    "message": "Export abgebrochen. $COUNT$ Bestellungen gespeichert, Details für $DETAILS$ verarbeitet.",
+    "description": "Status message when export is stopped during detail fetching and the orders collected so far are downloaded",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1618"
+      },
+      "details": {
+        "content": "$2",
+        "example": "45"
+      }
+    }
+  },
   "exportComplete": {
     "message": "Fertig! $COUNT$ Bestellungen exportiert.",
     "description": "Completion message with order count",

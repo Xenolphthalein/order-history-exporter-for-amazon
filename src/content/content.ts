@@ -38,6 +38,7 @@ import {
   buildTransactionsFromCPEEntries,
   isPdfInvoiceHref,
   downloadInvoicesForOrder,
+  fetchTextWithRetry,
 } from '../utils';
 import type { DownloadResponse } from '../utils';
 import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../constants';
@@ -56,6 +57,9 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
    * stop takes effect even when the direct message is lost.
    */
   let stopRequested = false;
+
+  /** True once the user stopped the export (in this page or via cleared state). */
+  const isStopRequested = (): boolean => stopRequested || !getExportState();
 
   /**
    * Get localized message from browser i18n API
@@ -339,9 +343,10 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
     if (state.downloadInvoices) {
       await setDownloadsUIEnabled(false);
     }
+    let detailsProcessed: number;
     try {
       // Fetch item prices (and optionally transaction details and invoice PDFs)
-      await fetchOrderDetailsForPrices(
+      detailsProcessed = await fetchOrderDetailsForPrices(
         state.collectedOrders,
         state.includeTransactions,
         state.downloadInvoices
@@ -352,14 +357,38 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
       }
     }
 
-    // Check if stop was requested during price fetching (state already cleared by handler)
-    if (stopRequested || !getExportState()) {
+    // Stop during price fetching (state already cleared by the handler): keep
+    // what was collected instead of discarding a possibly hours-long run.
+    // Orders whose details were not fetched keep chargedAmount === null.
+    if (isStopRequested()) {
+      if (state.collectedOrders.length === 0) {
+        return;
+      }
+      await downloadOrdersFile(state, '-partial');
+      updateProgress(
+        100,
+        getMessage('exportStoppedPartial', [
+          String(state.collectedOrders.length),
+          String(detailsProcessed),
+        ])
+      );
       return;
     }
 
     updateProgress(95, getMessage('generatingFile'));
+    await downloadOrdersFile(state, '');
 
-    // Generate file
+    updateProgress(100, getMessage('exportComplete', [String(state.collectedOrders.length)]));
+
+    // Clear state
+    clearExportState();
+  }
+
+  /**
+   * Serialize the collected orders in the selected format and hand the file
+   * to the background script for download.
+   */
+  async function downloadOrdersFile(state: ExportState, fileNameSuffix: string): Promise<void> {
     let fileContent: string;
     let fileName: string;
     let mimeType: string;
@@ -370,11 +399,11 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
         ? state.collectedOrders
         : state.collectedOrders.map(({ transactions: _tx, ...rest }) => rest);
       fileContent = JSON.stringify(jsonOrders, null, 2);
-      fileName = `amazon-orders-${timestamp}.json`;
+      fileName = `amazon-orders-${timestamp}${fileNameSuffix}.json`;
       mimeType = 'application/json';
     } else {
       fileContent = convertToCSV(state.collectedOrders, state.includeTransactions);
-      fileName = `amazon-orders-${timestamp}.csv`;
+      fileName = `amazon-orders-${timestamp}${fileNameSuffix}.csv`;
       mimeType = 'text/csv';
     }
 
@@ -387,11 +416,6 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
         mimeType: mimeType,
       },
     });
-
-    updateProgress(100, getMessage('exportComplete', [String(state.collectedOrders.length)]));
-
-    // Clear state
-    clearExportState();
   }
 
   /**
@@ -985,14 +1009,15 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
     orders: Order[],
     includeTransactions: boolean,
     downloadInvoices: boolean
-  ): Promise<void> {
+  ): Promise<number> {
     const ordersNeedingDetails = orders.filter((order) => order.detailsUrl);
+    let processed = 0;
 
     console.log('[Amazon Exporter] Fetching details for', ordersNeedingDetails.length, 'orders');
 
     for (let i = 0; i < ordersNeedingDetails.length; i++) {
       // Check if stop was requested during price fetching
-      if (stopRequested || !getExportState()) {
+      if (isStopRequested()) {
         break;
       }
 
@@ -1005,12 +1030,14 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
           getMessage('fetchingPricesProgress', [String(i + 1), String(ordersNeedingDetails.length)])
         );
 
-        const response = await fetch(order.detailsUrl, {
-          credentials: 'include',
-        });
+        const response = await fetchTextWithRetry(
+          order.detailsUrl,
+          { credentials: 'include' },
+          { isStopRequested }
+        );
 
         if (response.ok) {
-          const html = await response.text();
+          const html = response.text;
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
           parseItemPricesFromDetails(order, doc);
@@ -1042,9 +1069,13 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
 
             const txUrl = buildTransactionUrl(transactionOrigin, order.orderId);
             try {
-              const txResponse = await fetch(txUrl, { credentials: 'include' });
+              const txResponse = await fetchTextWithRetry(
+                txUrl,
+                { credentials: 'include' },
+                { isStopRequested }
+              );
               if (txResponse.ok) {
-                const txHtml = await txResponse.text();
+                const txHtml = txResponse.text;
                 const txParser = new DOMParser();
                 const txDoc = txParser.parseFromString(txHtml, 'text/html');
                 order.transactions = parseTransactionsFromCPEDoc(txDoc, transactionHost);
@@ -1097,9 +1128,11 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
 
         await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
-        console.warn('[Amazon Exporter] Error fetching details:', error);
+        console.warn('[Amazon Exporter] Error fetching details:', order.orderId, error);
       }
+      processed++;
     }
+    return processed;
   }
 
   /**
@@ -1147,17 +1180,21 @@ import { STORAGE_KEY, STOP_FLAG_KEY, INVOICE_DOWNLOAD_SUBFOLDER } from '../const
   async function downloadInvoicePdfsForOrder(orderId: string, origin: string): Promise<void> {
     await downloadInvoicesForOrder(orderId, origin, INVOICE_DOWNLOAD_SUBFOLDER, {
       async fetchPdfHrefs(popoverUrl) {
-        const response = await fetch(popoverUrl, { credentials: 'include' });
+        const response = await fetchTextWithRetry(
+          popoverUrl,
+          { credentials: 'include' },
+          { isStopRequested }
+        );
         if (!response.ok) {
           console.warn(
             `[Amazon Exporter] Invoice popover fetch failed for ${orderId}: HTTP ${response.status}`
           );
           return null;
         }
-        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const doc = new DOMParser().parseFromString(response.text, 'text/html');
         return extractInvoicePdfHrefs(doc);
       },
-      isStopRequested: () => stopRequested || !getExportState(),
+      isStopRequested,
       download: (data) =>
         browser.runtime.sendMessage({ action: 'downloadInvoiceUrl', data }) as Promise<
           DownloadResponse | undefined

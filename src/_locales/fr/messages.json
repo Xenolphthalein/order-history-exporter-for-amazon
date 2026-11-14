@@ -175,6 +175,20 @@
     "message": "Exportation arrêtée par l'utilisateur.",
     "description": "Status message when export is stopped"
   },
+  "exportStoppedPartial": {
+    "message": "Exportation arrêtée. $COUNT$ commandes enregistrées, détails traités pour $DETAILS$.",
+    "description": "Status message when export is stopped during detail fetching and the orders collected so far are downloaded",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1618"
+      },
+      "details": {
+        "content": "$2",
+        "example": "45"
+      }
+    }
+  },
   "exportComplete": {
     "message": "Exportation terminée ! $COUNT$ commandes exportées.",
     "description": "Completion message with order count",
