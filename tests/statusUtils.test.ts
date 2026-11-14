@@ -207,3 +207,15 @@ describe('parseOrderStatus', () => {
     expect(parseOrderStatus(text)).toBe('In arrivo');
   });
 });
+
+describe('parseOrderStatus with German return statuses', () => {
+  it('recognizes "Erstattet" (return in progress, refund initiated)', () => {
+    const text = 'Erstattet\nDeine Rücksendung ist unterwegs. Deine Gutschrift wurde veranlasst.';
+    expect(parseOrderStatus(text)).toBe('Erstattet');
+  });
+
+  it('recognizes "Rücksendung abgeschlossen"', () => {
+    const text = 'Rücksendung abgeschlossen\nDeine Rücksendung ist abgeschlossen.';
+    expect(parseOrderStatus(text)).toBe('Rücksendung abgeschlossen');
+  });
+});

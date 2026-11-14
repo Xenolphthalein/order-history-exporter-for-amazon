@@ -701,3 +701,53 @@ describe('amazon.co.jp (JPY)', () => {
     });
   });
 });
+
+describe('summarizePaymentRows with German refund rows (amazon.de)', () => {
+  it('ignores "Summe der Erstattung" for a fully gift-card paid return in progress', () => {
+    const rows = [
+      { label: 'Zwischensumme:', amount: 78.32 },
+      { label: 'Verpackung & Versand:', amount: 0 },
+      { label: 'Summe:', amount: 78.32 },
+      { label: 'Geschenkgutschein(e):', amount: -78.32 },
+      { label: 'Gesamtsumme:', amount: 0 },
+      { label: 'Summe der Erstattung', amount: 78.32 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 0, giftCardAmount: 78.32 });
+  });
+
+  it('ignores "Summe der Erstattung" for a partly gift-card paid order with tax rows', () => {
+    const rows = [
+      { label: 'Zwischensumme:', amount: 37.81 },
+      { label: 'Verpackung & Versand:', amount: 0 },
+      { label: 'Gesamt vor USt.:', amount: 37.81 },
+      { label: 'Geschätzte USt.:', amount: 7.18 },
+      { label: 'Summe:', amount: 44.99 },
+      { label: 'Geschenkgutschein(e):', amount: -15.85 },
+      { label: 'Gesamtsumme:', amount: 29.14 },
+      { label: 'Summe der Erstattung', amount: 44.99 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 29.14, giftCardAmount: 15.85 });
+  });
+
+  it('ignores "Summe der Erstattung" for a completed return', () => {
+    const rows = [
+      { label: 'Zwischensumme:', amount: 79.26 },
+      { label: 'Verpackung & Versand:', amount: 0 },
+      { label: 'Summe ohne MwSt.:', amount: 79.26 },
+      { label: 'Summe:', amount: 94.32 },
+      { label: 'Geschenkgutschein(e):', amount: -94.32 },
+      { label: 'Gesamtsumme:', amount: 0 },
+      { label: 'Summe der Erstattung', amount: 94.32 },
+    ];
+    expect(summarizePaymentRows(rows)).toEqual({ chargedAmount: 0, giftCardAmount: 94.32 });
+  });
+
+  it('still ignores "Rückerstattungsbetrag"', () => {
+    const rows = [
+      { label: 'Gesamtsumme:', amount: 12.5 },
+      { label: 'Rückerstattungsbetrag:', amount: 12.5 },
+    ];
+    expect(summarizePaymentRows(rows).chargedAmount).toBe(12.5);
+    expect(summarizePaymentRows([...rows.slice(0, 1)]).chargedAmount).toBe(12.5);
+  });
+});
