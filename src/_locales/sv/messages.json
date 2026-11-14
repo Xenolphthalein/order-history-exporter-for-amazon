@@ -175,6 +175,20 @@
     "message": "Export avbruten av användaren.",
     "description": "Status message when export is stopped"
   },
+  "exportStoppedPartial": {
+    "message": "Export avbruten. $COUNT$ beställningar sparade, detaljer behandlade för $DETAILS$.",
+    "description": "Status message when export is stopped during detail fetching and the orders collected so far are downloaded",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1618"
+      },
+      "details": {
+        "content": "$2",
+        "example": "45"
+      }
+    }
+  },
   "exportComplete": {
     "message": "Klar! $COUNT$ beställningar exporterade.",
     "description": "Completion message with order count",

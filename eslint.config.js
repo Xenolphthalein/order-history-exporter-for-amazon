@@ -28,6 +28,8 @@ export default [
         Blob: 'readonly',
         DOMParser: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        AbortController: 'readonly',
         fetch: 'readonly',
         HTMLElement: 'readonly',
         Element: 'readonly',

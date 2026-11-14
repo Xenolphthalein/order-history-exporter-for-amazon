@@ -130,7 +130,9 @@ The built extensions will be in browser-specific directories:
 5. Optionally check **Include transaction details** to add the actual charged amount and transaction date to each order — this fetches one extra page per order so exports will take longer
 6. Optionally check **Download invoice PDFs** to save each order's invoice PDF to `amazon-invoices/` in your Downloads folder (adds one extra page fetch per order, so exports take longer). Multi-shipment orders are suffixed `_1`, `_2`, ... to keep filenames unique. On Chrome the download shelf is temporarily hidden during the export so it isn't flooded; Firefox has no equivalent API and the panel behaves normally.
 7. Click "Export" to download your order history
-8. To cancel an export in progress, reopen the popup and click "Stop Export"
+8. To cancel an export in progress, reopen the popup and click "Stop Export". If you stop while order details are being fetched, the orders collected so far are still downloaded as `amazon-orders-<date>-partial.json` (or `.csv`); orders whose details were not fetched yet have `chargedAmount: null`
+
+Each order-detail, transaction and invoice request times out after 30 seconds and is retried up to two times on timeouts, network errors and throttling responses (HTTP 408, 429, 5xx). An order that still fails is skipped and the export continues.
 
 ---
 

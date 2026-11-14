@@ -10,3 +10,4 @@ export * from './csvUtils';
 export * from './urlUtils';
 export * from './transactionUtils';
 export * from './invoiceUtils';
+export * from './fetchUtils';
